@@ -1,0 +1,10 @@
+{
+  "id": "PAG-TEST",
+  "supplier": "Proveedor fixture",
+  "order": "PED-TEST",
+  "date": "2026-09-22",
+  "amount": 12345,
+  "method": "transferencia",
+  "reference": "REF-TEST",
+  "notes": "Nota fixture"
+}

@@ -1,57 +1,15 @@
+import { createHash } from 'node:crypto';
+import { lookup } from 'node:dns/promises';
 import { NextResponse } from 'next/server';
+import { assertMagic, assertSafeUrl, isBlockedAddress, SOURCE_LIMITS } from '@/lib/source-validation';
 
-const MAX_BYTES = 5 * 1024 * 1024;
-
-function publicHttpUrl(value: unknown): URL {
-  if (typeof value !== 'string') throw new Error('URL ausente');
-  const url = new URL(value);
-  if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Solo se permiten URLs http:// o https://');
-  const host = url.hostname.toLowerCase();
-  const privateHost = host === 'localhost' || host.endsWith('.localhost') || host === '::1' || host === '0.0.0.0' || host === '[::1]' || /^(10|127)\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) || host.endsWith('.local') || host.endsWith('.internal');
-  if (privateHost) throw new Error('La URL apunta a localhost o una red privada y fue bloqueada');
-  if (host.includes(':') && (host.startsWith('fc') || host.startsWith('fd') || host.startsWith('fe80'))) throw new Error('La URL apunta a una IP privada y fue bloqueada');
-  return url;
+export const runtime = 'nodejs';
+async function readLimited(response: Response) { const declared = Number(response.headers.get('content-length') || 0); if (declared > SOURCE_LIMITS.maxBytes) throw new Error('El recurso supera el máximo seguro de 5 MB'); if (!response.body) return new Uint8Array(); const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let total = 0; while (true) { const result = await reader.read(); if (result.done) break; total += result.value.byteLength; if (total > SOURCE_LIMITS.maxBytes) { await reader.cancel(); throw new Error('El recurso supera el máximo seguro de 5 MB'); } chunks.push(result.value); } const bytes = new Uint8Array(total); let offset = 0; chunks.forEach((chunk) => { bytes.set(chunk, offset); offset += chunk.byteLength; }); return bytes; }
+async function assertResolvedPublicUrl(url: URL) {
+  const host = url.hostname.replace(/^\[|\]$/g, '');
+  if (isBlockedAddress(host)) throw new Error('La URL apunta a una dirección reservada o privada y fue bloqueada');
+  if (/^[\d.]+$/.test(host) || host.includes(':')) return;
+  const addresses = await lookup(host, { all: true, verbatim: true });
+  if (!addresses.length || addresses.some(({ address }) => isBlockedAddress(address))) throw new Error('El dominio resuelve a una red privada, reservada o no pudo resolverse de forma segura');
 }
-
-async function readLimited(response: Response) {
-  const declared = Number(response.headers.get('content-length') || 0);
-  if (declared > MAX_BYTES) throw new Error('El recurso supera el máximo de 5 MB');
-  if (!response.body) return '';
-  const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  while (true) {
-    const result = await reader.read();
-    if (result.done) break;
-    total += result.value.byteLength;
-    if (total > MAX_BYTES) { await reader.cancel(); throw new Error('El recurso supera el máximo de 5 MB'); }
-    chunks.push(result.value);
-  }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  chunks.forEach((chunk) => { bytes.set(chunk, offset); offset += chunk.byteLength; });
-  return new TextDecoder().decode(bytes);
-}
-
-export async function POST(request: Request) {
-  try {
-    const body = await request.json() as { url?: string };
-    let url = publicHttpUrl(body.url);
-    let response: Response | undefined;
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(10000), headers: { accept: 'text/html,text/plain,application/pdf' } });
-      if (![301, 302, 303, 307, 308].includes(response.status)) break;
-      const location = response.headers.get('location');
-      if (!location) throw new Error('El sitio devolvió una redirección sin destino');
-      url = publicHttpUrl(new URL(location, url).toString());
-    }
-    if (!response || !response.ok) throw new Error(`El sitio respondió con HTTP ${response?.status || 'desconocido'}`);
-    const type = response.headers.get('content-type') || '';
-    if (!/(text\/|application\/pdf|application\/json)/i.test(type)) throw new Error(`Tipo de contenido no soportado: ${type || 'desconocido'}`);
-    const text = await readLimited(response);
-    return NextResponse.json({ text, finalUrl: url.toString(), contentType: type, size: new TextEncoder().encode(text).byteLength });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'No se pudo leer la URL';
-    return NextResponse.json({ error: message }, { status: 400 });
-  }
-}
+export async function POST(request: Request) { try { const body = await request.json() as { url?: string }; let url = assertSafeUrl(body.url); let response: Response | undefined; for (let attempt = 0; attempt < 4; attempt += 1) { await assertResolvedPublicUrl(url); response = await fetch(url, { redirect: 'manual', signal: AbortSignal.timeout(SOURCE_LIMITS.timeoutMs), headers: { accept: 'text/html,application/json,application/pdf,text/plain' } }); if (![301, 302, 303, 307, 308].includes(response.status)) break; const location = response.headers.get('location'); if (!location) throw new Error('Redirección sin destino'); url = assertSafeUrl(new URL(location, url).toString()); } if (!response?.ok) throw new Error(`El sitio respondió con HTTP ${response?.status || 'desconocido'}`); const contentType = (response.headers.get('content-type') || '').split(';')[0].toLowerCase(); if (!['text/html', 'application/json', 'application/pdf', 'text/plain'].includes(contentType)) throw new Error(`Tipo de contenido no soportado: ${contentType || 'desconocido'}`); const bytes = await readLimited(response); assertMagic(bytes, contentType); const sha256 = createHash('sha256').update(bytes).digest('hex'); if (contentType === 'application/pdf') return NextResponse.json({ finalUrl: url.toString(), contentType, byteLength: bytes.byteLength, sha256, pdf: true, text: null }); const text = new TextDecoder().decode(bytes).slice(0, SOURCE_LIMITS.maxText); return NextResponse.json({ text, finalUrl: url.toString(), contentType, byteLength: bytes.byteLength, sha256 }); } catch (error) { const message = error instanceof Error ? error.message : 'No se pudo leer la URL'; return NextResponse.json({ error: message, recoverable: true }, { status: 400 }); } }

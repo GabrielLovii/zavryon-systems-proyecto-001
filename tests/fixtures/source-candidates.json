@@ -1,0 +1,6 @@
+{
+  "html": "<table><tr><th>Producto</th><th>Precio</th></tr><tr><td>Leche LAC-001</td><td>ARS 2.400</td></tr></table>",
+  "jsonLd": "{\"@type\":\"Product\",\"name\":\"Leche entera\",\"sku\":\"LAC-001\",\"offers\":{\"price\":2400,\"priceCurrency\":\"ARS\"}}",
+  "pdfText": "LAC-001 Leche entera ARS 2.400",
+  "scannedPdf": ""
+}

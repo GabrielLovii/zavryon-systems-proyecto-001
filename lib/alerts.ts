@@ -1,6 +1,6 @@
 import type { DemoState } from './demo-store';
 import type { Expiry, Order } from './mock-data';
-import { getLocalDateISO } from './date';
+import { getLocalDateISO, isValidLocalDateISO } from './date';
 
 export const DEMO_TODAY = '2026-09-21';
 export type AlertKind = 'vencimiento' | 'entrega';
@@ -12,20 +12,21 @@ export type AlertPreferences = { expiries: boolean; deliveries: boolean; browser
 const addDays = (value: string, amount: number) => { const date = new Date(`${value}T00:00:00`); date.setDate(date.getDate() + amount); return date.toISOString().slice(0, 10); };
 export const daysUntil = (value: string, reference = getLocalDateISO()) => Math.round((new Date(`${value.slice(0, 10)}T00:00:00`).getTime() - new Date(`${reference}T00:00:00`).getTime()) / 86400000);
 
-export function buildAlerts(state: Pick<DemoState, 'expiries' | 'orders' | 'suppliers' | 'products'>, reference = getLocalDateISO(), previous: AppAlert[] = []): AppAlert[] {
+export function buildAlerts(state: Pick<DemoState, 'expiries' | 'orders' | 'suppliers' | 'products' | 'alertPreferences'>, reference = getLocalDateISO(), previous: AppAlert[] = []): AppAlert[] {
   const generated: AppAlert[] = [];
   const previousByKey = new Map(previous.map((item) => [item.key, item]));
   const add = (item: Omit<AppAlert, 'id' | 'status' | 'createdAt'>) => {
     const existing = previousByKey.get(item.key);
     generated.push({ ...item, id: existing?.id || `alert-${item.key}`, status: existing?.status || 'programada', createdAt: existing?.createdAt || new Date().toISOString() });
   };
-  state.expiries.forEach((expiry: Expiry) => [3, 2, 1, 0].forEach((offset) => {
+  if (state.alertPreferences.expiries) state.expiries.forEach((expiry: Expiry) => [3, 2, 1, 0].forEach((offset) => {
     const alertDate = addDays(expiry.date, -offset); const delta = daysUntil(alertDate, reference);
     const product = state.products.find((item) => item.id === expiry.productId)?.name || 'Producto';
     const supplier = state.suppliers.find((item) => item.id === expiry.supplierId)?.name || 'Proveedor';
     add({ key: `${expiry.id}:expiry-${offset}:${alertDate}`, kind: 'vencimiento', rule: `expiry-${offset}` as AlertRule, referenceDate: alertDate, sourceId: expiry.id, title: offset === 0 ? `Vence hoy: ${product}` : `Vencimiento en ${offset} día(s): ${product}`, detail: `${supplier} · lote ${expiry.lot} · ${expiry.quantity} uds.`, supplierId: expiry.supplierId, productId: expiry.productId, lot: expiry.lot, quantity: expiry.quantity, priority: delta <= 0 ? 'alta' : 'media' });
   }));
-  state.orders.filter((order: Order) => !['Cerrado', 'Cancelado'].includes(order.status) && order.expectedDate).forEach((order) => [1, 0].forEach((offset) => {
+  if (!state.alertPreferences.deliveries) return generated;
+  state.orders.filter((order: Order) => !['Cerrado', 'Cancelado'].includes(order.status) && isValidLocalDateISO(order.expectedDate)).forEach((order) => [1, 0].forEach((offset) => {
     const alertDate = addDays(order.expectedDate, -offset); const supplier = state.suppliers.find((item) => item.id === order.supplierId)?.name || 'Proveedor';
     add({ key: `${order.id}:delivery-${offset}:${alertDate}`, kind: 'entrega', rule: `delivery-${offset}` as AlertRule, referenceDate: alertDate, sourceId: order.id, title: offset === 0 ? `Entrega hoy: ${order.id}` : `Entrega mañana: ${order.id}`, detail: `${supplier} · ${order.lines.length} artículo(s) · ${order.status}`, supplierId: order.supplierId, priority: daysUntil(alertDate, reference) <= 0 ? 'alta' : 'media' });
   }));

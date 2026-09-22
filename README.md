@@ -45,13 +45,14 @@ Para la comprobación manual exacta:
 1. Abrir `Usuarios` y comprobar que aparecen exactamente Gabriel López, Gabriel Gauto, Facundo Chamorro y Martin Ruiz Dias. Agregar, editar, activar/desactivar y eliminar; la aplicación bloquea eliminar/desactivar el último usuario activo.
 2. Abrir `Nuevo pedido`, seleccionar proveedor y responsable, buscar productos por nombre, SKU, marca, categoría o código externo y agregarlos desde los resultados. Verificar que repetir un producto aumenta su cantidad sin duplicar la línea; editar cantidad/precio o quitar líneas y comprobar el subtotal/total. En `Recepcion`, seleccionar proveedor, después pedido, cambiar una línea a `Llegó`, informar cantidad, lote, activar `Controlar vencimiento`, elegir fecha y pulsar `Guardar estado`.
 3. Volver a abrir el pedido y comprobar que estado, cantidad, nota, lote y vencimiento se conservaron. Pulsar `Guardar recepción completa`; `Proveedores llegados` debe mostrar una sola llegada y `Vencimientos` el lote.
-4. Abrir `Fuentes`, registrar una URL pública o PDF menor a 10 MB. Pulsar `Revisar / extraer`. Las URL se consultan por `/api/source-preview`, que bloquea localhost, IPs privadas, esquemas no HTTP(S), redirecciones privadas y respuestas mayores a 5 MB. Editar candidatos, marcar `Aprobado` y pulsar `Confirmar aprobados`.
+4. Abrir `Fuentes`, registrar una URL pública o PDF menor a 5 MB. Pulsar `Revisar / extraer`. Las URL se consultan por `/api/source-preview`, que bloquea localhost, IPs privadas, esquemas no HTTP(S), redirecciones privadas y respuestas mayores a 5 MB. Editar candidatos, marcar `Aprobado` y pulsar `Confirmar aprobados`.
 5. Comprobar que el catálogo actualiza o crea productos sin duplicar por SKU/nombre y conserva proveedor y fuente. Si no se puede leer el sitio o el PDF no contiene texto extraíble, se muestra el error y se permite agregar candidatos manualmente; no se simula OCR.
 6. Recargar para verificar `localStorage` versionado v6. Cada actualización se guarda inmediatamente y mantiene una copia de recuperación; Configuración muestra el último guardado local. `Restaurar demo` solo está en Configuración, exige confirmación doble y sobrescribe los datos locales.
 7. En `Pedidos`, pulsar `Exportar PDF` en la fila del pedido elegido. Se abre el detalle imprimible del pedido correcto; en la ventana del navegador elegir `Guardar como PDF`.
 8. En `Notificaciones`, comprobar que cada vencimiento genera reglas a 3, 2, 1 días y el día de vencimiento, y que los pedidos abiertos generan reglas a 1 día y el mismo día. `Cargar alertas demo próximas` conserva sus fechas de prueba fijas para poder validar alertas próximas sin modificar los datos iniciales; la operación normal calcula contra la fecha local real.
 9. En `Agenda`, usar filtros de tipo/estado y `Exportar .ics`. El archivo incluye eventos y `VALARM`; el usuario debe importarlo o abrirlo manualmente en Google Calendar/Outlook. En `Notificaciones`, activar preferencias y el permiso del navegador solo con el botón explícito. La interfaz informa si Notification API está disponible, concedida o denegada y conserva alertas internas como fallback.
 10. En `Usuarios`, cambia el selector de usuario activo en la barra lateral y verifica que el saludo muestre el nombre elegido. Si el usuario guardado deja de estar activo, se usa automáticamente el primer usuario activo.
+11. En `Pagos`, cada fila ofrece `Exportar PDF`; el documento individual contiene proveedor, pedido, fecha, importe, método, referencia y notas, y permite imprimir/Guardar como PDF. Compartir es opcional y no modifica el estado.
 
 ## Alcance del MVP
 
@@ -60,7 +61,7 @@ Para la comprobación manual exacta:
 - Pedidos recientes con estados operativos y alertas accionables.
 - Actividad reciente / historial de movimientos.
 - Datos de demostracion aislados en `lib/mock-data.ts`, listos para reemplazarse por una API.
-- Pagos tipados y persistidos con `localStorage` versionado v6; cada mutación se escribe de inmediato, con backup para recuperación ante JSON corrupto o cierre inesperado. El campo `cancelled` conserva trazabilidad al anular y la sesión activa queda restaurable.
+- Pagos tipados y persistidos con `localStorage` versionado v7 (compatible con v5/v6); cada mutación se escribe con backup para recuperación ante JSON corrupto o cierre inesperado. El campo `cancelled` conserva trazabilidad al anular y cada pago tiene exportación individual imprimible.
 - Totales diarios, semanales y mensuales presentados en la vista económica; esta demo usa el mismo conjunto local para los tres períodos.
 - Catálogo con búsqueda, alta/edición y asociación producto-proveedor; Fuentes conserva metadata local de PDF/URL y estados de revisión; Vencimientos permite filtrar alertas de 3 días y editar lote/fecha; Agenda e Historial reúnen los flujos y permiten exportar historial CSV.
 - Cada pedido se puede exportar desde su fila como un informe detallado de impresión con productos, recepción, diferencias, lotes, pagos y datos disponibles. La vista oculta controles y navegación al imprimir.
@@ -72,10 +73,27 @@ Para la comprobación manual exacta:
 - `app/`: entrada Next.js y estilos globales.
 - `components/`: layout de navegacion y dashboard.
 - `lib/mock-data.ts`: mock data separada de la presentacion.
-- `lib/demo-store.ts`: estado y persistencia local versionada de la demo (v6), con escritura inmediata y recuperación segura.
+- `lib/demo-store.ts`: estado y persistencia local versionada de la demo (v7), con guardado-at compatible, backup y recuperación segura.
 - `public/sw.js`: service worker para cache del app shell y soporte de notificación local.
 - `docs/MEJORAS-50.md`: backlog priorizado de capacidades.
 
 ## Alcance de fuentes
 
-Los PDF se validan y conservan como metadata de revisión en el navegador. Se intenta leer texto embebido con `File.text()` cuando el archivo sigue disponible en la sesión, pero no hay OCR productivo ni dependencia PDF. Las URL se consultan mediante el endpoint seguro local y requieren revisión humana; CORS del sitio no es una barrera para ese endpoint, pero autenticación, bloqueos del sitio, tipo no soportado o límite de tamaño producen error. Los candidatos deben editarse y aprobarse antes de importarse al catálogo.
+Los PDF se validan y conservan como metadata de revisión en el navegador. Cuando el archivo sigue disponible se extrae únicamente la capa de texto real con `pdfjs-dist`; un escaneo sin texto requiere revisión manual y no se simula OCR. Las URL se consultan mediante el endpoint seguro local, validando cada redirección y dirección DNS; autenticación, bloqueos del sitio, tipo no soportado o límite de tamaño producen error. Los candidatos deben editarse, evidenciarse y aprobarse antes de importarse al catálogo.
+# Robustez y límites de fuentes
+
+La aplicación conserva pedidos, proveedores, recepciones, fuentes y borradores en el almacenamiento local del navegador. Los borradores se guardan con debounce, copia de seguridad y estado visible; si el almacenamiento falla se muestra una acción de recuperación y no se afirma que se guardó.
+
+Las fuentes URL se leen con límites de tamaño/tiempo, validación de redirecciones y tipos. La extracción usa HTML visible, JSON-LD/meta, tablas y PDFs con capa de texto real. No hay OCR, bypass anti-bot, automatización de navegador ni importación de cantidad. Todo candidato muestra evidencia y requiere edición/aprobación humana.
+
+Las notificaciones requieren una acción del usuario y contexto seguro. El MVP ofrece alertas en primer plano, fallback dentro de la app e ICS; no implementa Web Push, VAPID, suscripciones ni notificaciones con la app cerrada.
+
+## Verificación local
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+`npm test` ejecuta el runner mínimo de regresión (`node --test`) para drafts, saved-at v7, gating, SSRF y exportación de pagos. No se debe desplegar hasta ejecutar lint, tipos, tests, build y revisar el commit verificado.

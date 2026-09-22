@@ -45,10 +45,10 @@ export function OrderPdf({ state, orderId, onClose }: { state: PdfState; orderId
           <div className="print-brand"><img src="/logo-scpr.jpg" alt="Logo SCPR" className="print-logo" /><div><div className="print-company">{state.config.companyName}</div><h1>Control de Abastecimiento</h1><p>{state.config.clientName} · Detalle de pedido</p></div></div>
         <div className="print-order-id"><span>ID del pedido</span><strong>{order.id}</strong></div>
       </header>
-      <section className="print-grid">
-        <div><strong>Proveedor</strong><span>{display(supplier?.name)}</span><small>{display(supplier?.contact)} · {display(supplier?.phone)}</small><small>{display(supplier?.email)}</small><small>{display(supplier?.address)}</small></div>
-        <div><strong>Creación</strong><span>{dateEs(order.createdAt)}</span><strong>Entrega prevista</strong><span>{dateEs(order.expectedDate)}</span></div>
-        <div><strong>Responsable</strong><span>{display(order.responsible)}</span><strong>Estado</strong><span>{display(order.status)}</span></div>
+       <section className="print-grid">
+         <div><strong>Proveedor</strong><span>{display(supplier?.name)}</span><small>{display(supplier?.contact)} · {display(supplier?.phone)}</small><small>{display(supplier?.email)}</small><small>{display(supplier?.address)}</small></div>
+         <div><strong>Creación</strong><span>{dateEs(order.createdAt)}</span><strong>Entrega prevista</strong><span>{dateEs(order.expectedDate)}</span></div>
+         <div><strong>Solicitante</strong><span>{order.requester || (order.responsible ? `Legacy · responsable (${order.responsible})` : 'Legacy / no registrado')}</span><strong>Solicitado el</strong><span>{order.requestedAt ? `${dateEs(order.requestedAt)} · ${order.requestedAt.slice(11, 16)}` : order.createdAt ? `Legacy · creación (${dateEs(order.createdAt)})` : 'Legacy / no registrado'}</span><strong>Responsable</strong><span>{display(order.responsible)}</span><strong>Estado</strong><span>{display(order.status)}</span></div>
       </section>
       <section className="print-section"><h2>Productos</h2><div className="print-table-wrap"><table className="print-table"><thead><tr><th>SKU</th><th>Producto / presentación</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th><th>Recepción</th><th>Recibida</th><th>Diferencia</th><th>Lote / vencimiento</th></tr></thead><tbody>{order.lines.map((line) => {
         const product = state.products.find((item) => item.id === line.productId);

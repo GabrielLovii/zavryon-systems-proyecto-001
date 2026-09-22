@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MagnifyingGlassIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { Order } from '@/lib/mock-data';
 import type { DemoState } from '@/lib/demo-store';
 import type { Section } from './sidebar';
-import { getLocalDateISO } from '@/lib/date';
+import { getLocalDateISO, getLocalDateTimeInput, isValidLocalDateISO, isValidLocalDateTimeInput } from '@/lib/date';
+import { discardDraft, loadDraft, saveDraft } from '@/lib/draft-store';
 
 type DraftLine = { id: string; productId: string; quantity: number; price: number };
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
@@ -18,13 +19,21 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 export function NewOrder({ state, update, notify, onNavigate }: { state: DemoState; update: Mutate; notify: (message: string) => void; onNavigate: (section: Section) => void }) {
   const activeUsers = state.users.filter((user) => user.active);
+  const activeUser = activeUsers.find((user) => user.id === state.activeUserId) || activeUsers[0];
   const activeSuppliers = state.suppliers.filter((supplier) => supplier.active);
   const [supplierId, setSupplierId] = useState(activeSuppliers[0]?.id || '');
-  const [responsible, setResponsible] = useState(activeUsers[0]?.name || '');
+  const [responsible, setResponsible] = useState(activeUser?.name || '');
+  const [requester, setRequester] = useState(activeUser?.name || '');
+  const [expectedDate, setExpectedDate] = useState(getLocalDateISO());
+  const [requestedAt, setRequestedAt] = useState(getLocalDateTimeInput());
+  const [expectedDateError, setExpectedDateError] = useState('');
   const [message, setMessage] = useState('');
   const supplierProducts = state.supplierProducts.filter((item) => item.supplierId === supplierId && item.active && state.products.some((product) => product.id === item.productId && product.active));
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [query, setQuery] = useState('');
+  const [draftInfo, setDraftInfo] = useState<{ savedAt: string | null; error?: string; recovered?: boolean }>({ savedAt: null });
+  useEffect(() => { const recovered = loadDraft<{ supplierId: string; responsible: string; requester: string; expectedDate: string; requestedAt: string; lines: DraftLine[]; query: string }>('new-order'); if (recovered) { setSupplierId(recovered.data.supplierId); setResponsible(recovered.data.responsible); setRequester(recovered.data.requester || recovered.data.responsible); setExpectedDate(recovered.data.expectedDate || getLocalDateISO()); setRequestedAt(recovered.data.requestedAt || getLocalDateTimeInput()); setLines(recovered.data.lines); setQuery(recovered.data.query); setDraftInfo({ savedAt: recovered.savedAt, recovered: recovered.recovered }); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { const result = saveDraft('new-order', { supplierId, responsible, requester, expectedDate, requestedAt, lines, query }); setDraftInfo({ savedAt: result.savedAt, error: result.error }); }, 350); return () => window.clearTimeout(timer); }, [supplierId, responsible, requester, expectedDate, requestedAt, lines, query]);
   const tell = (value: string) => { setMessage(value); notify(value); };
 
   const productResults = supplierProducts.map((supplierProduct) => {
@@ -64,19 +73,26 @@ export function NewOrder({ state, update, notify, onNavigate }: { state: DemoSta
   const updateLine = (id: string, patch: Partial<DraftLine>) => setLines((current) => current.map((line) => line.id === id ? { ...line, ...patch } : line));
   const total = lines.reduce((sum, line) => sum + Math.max(0, line.quantity) * Math.max(0, line.price), 0);
   const save = () => {
-    if (!supplierId || !responsible || !lines.length || lines.some((line) => !line.productId || line.quantity < 1 || line.price < 0)) return tell('Completa proveedor, responsable y todas las líneas');
+    if (!supplierId || !responsible || !requester || !lines.length || lines.some((line) => !line.productId || line.quantity < 1 || line.price < 0)) return tell('Completa proveedor, solicitante, responsable y todas las líneas');
+    if (!isValidLocalDateISO(expectedDate)) { setExpectedDateError('Ingresa una fecha de entrega válida.'); return tell('La fecha de entrega es obligatoria y válida'); }
+    if (!isValidLocalDateTimeInput(requestedAt)) return tell('Ingresa una fecha y hora de solicitud válidas');
+    setExpectedDateError('');
     const today = getLocalDateISO();
-    const order: Order = { id: `PED-${1048 + state.orders.length + 1}`, supplierId, lines: lines.map(({ id, productId, quantity, price }) => ({ id, productId, quantity, price })), expectedDate: today, notes: '', responsible, status: 'Preparado', createdAt: today };
+    const order: Order = { id: `PED-${1048 + state.orders.length + 1}`, supplierId, lines: lines.map(({ id, productId, quantity, price }) => ({ id, productId, quantity, price })), expectedDate, notes: '', responsible, requester, requestedAt, status: 'Preparado', createdAt: today };
     update((current) => ({ ...current, orders: [...current.orders, order] }));
+    discardDraft('new-order'); setDraftInfo({ savedAt: null });
     tell('Pedido creado');
     onNavigate('Pedidos');
   };
 
   return <section className="rounded-2xl border border-white/10 bg-petroleum-900 p-5 shadow-panel">
-    <div className="mb-5"><h3 className="font-bold text-white">Nuevo pedido</h3><p className="mt-1 text-xs text-slate-400">Agrega y revisa varias líneas del mismo proveedor antes de guardar.</p></div>
+     <div className="mb-5"><h3 className="font-bold text-white">Nuevo pedido</h3><p className="mt-1 text-xs text-slate-400">Agrega y revisa varias líneas del mismo proveedor antes de guardar.</p><p role="status" className="mt-2 text-xs text-slate-400">{draftInfo.error ? `Error de guardado: ${draftInfo.error}` : draftInfo.recovered ? 'Borrador recuperado localmente.' : draftInfo.savedAt ? `Borrador guardado ${new Date(draftInfo.savedAt).toLocaleTimeString()}` : 'Borrador local pendiente.'}</p></div>
     <div className="grid gap-4 md:grid-cols-2">
       <Field label="Proveedor"><select className="field w-full" value={supplierId} onChange={(event) => { setSupplierId(event.target.value); setLines([]); }}>{activeSuppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></Field>
-      <Field label="Responsable"><select className="field w-full" value={responsible} onChange={(event) => setResponsible(event.target.value)}>{activeUsers.map((user) => <option key={user.id} value={user.name}>{user.name}</option>)}</select></Field>
+       <Field label="Responsable"><select className="field w-full" value={responsible} onChange={(event) => setResponsible(event.target.value)}>{activeUsers.map((user) => <option key={user.id} value={user.name}>{user.name}</option>)}</select></Field>
+       <Field label="Solicitante"><select className="field w-full" value={requester} onChange={(event) => setRequester(event.target.value)}>{activeUsers.map((user) => <option key={user.id} value={user.name}>{user.name}</option>)}</select></Field>
+       <Field label="Entrega prevista"><input id="expected-date" className="field w-full" type="date" value={expectedDate} onChange={(event) => { setExpectedDate(event.target.value); setExpectedDateError(''); }} aria-invalid={Boolean(expectedDateError)} aria-describedby={expectedDateError ? 'expected-date-error' : undefined} required />{expectedDateError && <span id="expected-date-error" role="alert" className="mt-1 block text-xs text-red-300">{expectedDateError}</span>}</Field>
+       <Field label="Solicitado el"><input className="field w-full" type="datetime-local" value={requestedAt} onChange={(event) => setRequestedAt(event.target.value)} /></Field>
     </div>
      <div className="mt-6 rounded-xl border border-cyan-300/20 bg-ink/40 p-4">
        <label htmlFor="product-search" className="mb-2 block text-sm font-bold text-white">Buscar productos</label>
