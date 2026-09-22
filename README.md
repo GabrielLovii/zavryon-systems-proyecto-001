@@ -16,6 +16,12 @@ npm.cmd run dev
 
 Abrir `http://localhost:3000`.
 
+## Supabase
+
+La conexión preparada usa el proyecto `quigcuskwgaesizbtryv` y mantiene la demo local como fallback hasta autenticar usuarios. Para activarla, copia `.env.example` a `.env.local` y completa `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; la URL pública ya está indicada en el ejemplo. La publishable key puede estar en cliente porque RLS controla el acceso, pero nunca se debe incluir una `service_role`/secret key en el navegador, GitHub o logs.
+
+Consulta `docs/SUPABASE.md` para variables, ejecución local, aplicación de la migración ya creada, RLS y el adaptador de lecturas inicial (`business_settings`, `suppliers`, `products`, `orders`). En `Usuarios` se muestra el estado de conexión; sin variables o sin acceso la app sigue en modo demo local.
+
 La aplicación integra `1.jpg` como `public/logo-scpr.jpg` porque su fondo negro y azul eléctrico son compatibles con el tema oscuro actual. El recurso se usa sin conversión en la cabecera, iconos de aplicación y cabecera del PDF imprimible.
 
 ## Verificacion
