@@ -3,6 +3,7 @@ export type ReviewStatus = 'Pendiente' | 'Revisado' | 'Confirmado' | 'Rechazado'
 export type ReceptionStatus = 'pending' | 'received' | 'shortage' | 'surplus' | 'substitution';
 export type UserRole = 'Administrador' | 'Compras' | 'Recepción' | 'Consulta';
 export type CandidateStatus = 'Pendiente' | 'Aprobado' | 'Rechazado';
+export type PaymentPreference = 'Efectivo' | 'Transferencia' | 'Caja 1' | 'Caja 2' | 'Alejandro pago' | 'Otro';
 export type PaymentMethod = 'efectivo' | 'transferencia' | 'tarjeta' | 'cuenta corriente';
 export type PaymentStatus = 'pendiente' | 'parcial' | 'pagado' | 'vencido';
 
@@ -21,11 +22,19 @@ export type SourceCandidate = { id: string; name: string; sku: string; brand: st
 export type Source = { id: string; supplierId: string; kind: 'PDF' | 'URL'; name: string; url?: string; fileName?: string; size?: number; contentType?: string; date: string; status: ReviewStatus; notes: string; provenance: string; extractionStatus: 'Pendiente' | 'Extraído' | 'Revisión manual' | 'Error'; extractionError?: string; extractedAt?: string; candidates: SourceCandidate[] };
 
 export const today = '2026-09-21';
+export const paymentPreferences: string[] = ['Efectivo', 'Transferencia', 'Caja 1', 'Caja 2', 'Alejandro pago', 'Otro'];
+export const normalizePaymentPreference = (value: unknown): PaymentPreference => {
+  if (paymentPreferences.includes(value as PaymentPreference)) return value as PaymentPreference;
+  const legacy = String(value || '').toLowerCase();
+  if (legacy === 'efectivo' || legacy === 'contado') return 'Efectivo';
+  if (legacy === 'transferencia') return 'Transferencia';
+  return 'Otro';
+};
 export const config: AppConfig = { companyName: 'ZAVRYON SYSTEMS', productName: 'Control de Abastecimiento', clientName: 'Autoservicio Don Alejo', businessName: 'Autoservicio Don Alejo', address: 'Av. Principal 123', phone: '+54 11 5555 0101', headerNote: 'Demo local operativa' };
 export const suppliers: Supplier[] = [
-  { id: 'sup-norte', name: 'Distribuciones Norte', contact: 'María Gómez', phone: '+54 11 5555 0101', email: 'compras@norte.demo', address: 'Av. Industrial 120', terms: '30 días', notes: 'Entrega en muelle 2', active: true },
-  { id: 'sup-frio', name: 'FrioLogistica S.A.', contact: 'Luis Mora', phone: '+54 11 5555 0102', email: 'ventas@friolog.demo', address: 'Calle 80 10-15', terms: 'Contado', notes: '', active: true },
-  { id: 'sup-higiene', name: 'Higiene Total', contact: 'Jorge León', phone: '+54 11 5555 0104', email: 'pedidos@higiene.demo', address: 'Av. El Dorado 90', terms: '30 días', notes: '', active: true },
+  { id: 'sup-norte', name: 'Distribuciones Norte', contact: 'María Gómez', phone: '+54 11 5555 0101', email: 'compras@norte.demo', address: 'Av. Industrial 120', terms: 'Transferencia', notes: 'Entrega en muelle 2', active: true },
+  { id: 'sup-frio', name: 'FrioLogistica S.A.', contact: 'Luis Mora', phone: '+54 11 5555 0102', email: 'ventas@friolog.demo', address: 'Calle 80 10-15', terms: 'Efectivo', notes: '', active: true },
+  { id: 'sup-higiene', name: 'Higiene Total', contact: 'Jorge León', phone: '+54 11 5555 0104', email: 'pedidos@higiene.demo', address: 'Av. El Dorado 90', terms: 'Otro', notes: '', active: true },
 ];
 export const products: Product[] = [
   { id: 'prod-leche', name: 'Leche entera 1L', sku: 'LAC-001', brand: 'La Granja', category: 'Lácteos', unit: 'caja x 12', stock: 48, minimum: 30, active: true, currency: 'ARS', availability: 'Disponible' },

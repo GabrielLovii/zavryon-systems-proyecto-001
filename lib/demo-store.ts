@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { config, initialExpiries, initialOrders, initialPayments, initialReceptions, initialSources, initialUsers, products, supplierProducts, suppliers, today, type AppConfig, type Expiry, type Order, type Payment, type Product, type Reception, type Source, type Supplier, type SupplierProduct, type User } from './mock-data';
+import { config, initialExpiries, initialOrders, initialPayments, initialReceptions, initialSources, initialUsers, normalizePaymentPreference, products, supplierProducts, suppliers, today, type AppConfig, type Expiry, type Order, type Payment, type Product, type Reception, type Source, type Supplier, type SupplierProduct, type User } from './mock-data';
 import type { AlertPreferences, AppAlert } from './alerts';
 
 export const DEMO_STORAGE_KEY = 'zavryon-abastecimiento-demo-v6';
@@ -32,7 +32,7 @@ export function useDemoState() {
       if (!raw) return null;
       const saved = JSON.parse(raw) as Partial<DemoState>;
       if (![5, 6].includes(saved.version || 0) || !Array.isArray(saved.users) || !saved.config) return null;
-      return { ...initialDemoState(), ...saved, version: 6 as const, alerts: saved.alerts || [], alertPreferences: { ...initialDemoState().alertPreferences, ...saved.alertPreferences } };
+      return { ...initialDemoState(), ...saved, version: 6 as const, suppliers: (saved.suppliers || suppliers).map((supplier) => ({ ...supplier, terms: normalizePaymentPreference(supplier.terms) })), alerts: saved.alerts || [], alertPreferences: { ...initialDemoState().alertPreferences, ...saved.alertPreferences } };
     };
     try {
       const loaded = read(DEMO_STORAGE_KEY) || read(DEMO_BACKUP_KEY);

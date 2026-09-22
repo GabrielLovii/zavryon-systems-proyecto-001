@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDownTrayIcon, ArrowPathIcon, ArrowTrendingUpIcon, BellAlertIcon, CheckCircleIcon, ChevronRightIcon, ClockIcon, ExclamationTriangleIcon, PlusIcon, SignalIcon, SignalSlashIcon, TrashIcon, WalletIcon } from '@heroicons/react/24/outline';
-import { alerts, type CandidateStatus, type Expiry, type Order, type Payment, type PaymentMethod, type PaymentStatus, type Product, type ReceptionLine, type ReceptionStatus, type ReviewStatus, type Source, type SourceCandidate, type Supplier, type SupplierProduct, type User, type UserRole } from '@/lib/mock-data';
+import { alerts, paymentPreferences, normalizePaymentPreference, type CandidateStatus, type Expiry, type Order, type Payment, type PaymentMethod, type PaymentStatus, type Product, type ReceptionLine, type ReceptionStatus, type ReviewStatus, type Source, type SourceCandidate, type Supplier, type SupplierProduct, type User, type UserRole } from '@/lib/mock-data';
 import { type DemoState, useDemoState } from '@/lib/demo-store';
 import type { Section } from './sidebar';
 import { OrderPdf } from './order-pdf';
+import { printSupplierWindow } from './supplier-pdf';
 import { alertLabel, buildAlerts, calendarIcs, DEMO_TODAY, daysUntil, effectiveStatus, type AlertKind, type AppAlert } from '@/lib/alerts';
 import { AlertAgenda, AlertExpiries, Notifications } from './alert-center';
 import { SupabaseStatus } from './supabase-status';
@@ -67,10 +68,34 @@ function Arrivals({ state, onNavigate }: { state: State; onNavigate: (s: Section
 function Suppliers({ state, update, notify }: { state: State; update: Mutate; notify: (m: string) => void }) {
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState<Supplier | null>(null);
-  const paymentOptions = ['efectivo', 'transferencia', 'cuenta corriente', 'tarjeta', 'Otro'];
+  const paymentOptions = paymentPreferences;
   const filtered = state.suppliers.filter((x) => `${x.name} ${x.contact} ${x.active ? 'activo' : 'inactivo'}`.toLowerCase().includes(query.toLowerCase()));
-  const add = () => { const name = window.prompt('Nombre del proveedor'); if (!name?.trim()) return; update((current) => ({ ...current, suppliers: [...current.suppliers, { id: `sup-${Date.now()}`, name: name.trim(), contact: '', phone: '', email: '', address: '', terms: 'efectivo', notes: '', active: true }] })); notify('Proveedor creado'); };
-  const open = (supplier: Supplier) => setEditing({ ...supplier });
+  const printSupplier = useCallback((supplier: Supplier) => { if (!printSupplierWindow(state.config, supplier)) notify('Permite ventanas emergentes para imprimir el proveedor'); }, [state.config, notify]);
+  useEffect(() => {
+    const editButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).filter((button) => button.textContent === 'Editar');
+    const added: HTMLElement[] = [];
+    editButtons.forEach((editButton) => {
+      const supplier = filtered.find((item) => editButton.closest('tr')?.textContent?.includes(item.name));
+      if (!supplier || !editButton.parentElement) return;
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'button-secondary'; button.textContent = 'Exportar PDF';
+      button.addEventListener('click', () => printSupplier(supplier));
+      editButton.parentElement.insertBefore(button, editButton.nextSibling); added.push(button);
+    });
+    const title = Array.from(document.querySelectorAll('h3')).find((heading) => heading.textContent?.startsWith('Editar proveedor:'));
+    const section = title?.closest('section');
+    if (section && editing) {
+      const field = document.createElement('label'); field.className = 'block text-xs font-semibold text-slate-300';
+      const label = document.createElement('span'); label.className = 'mb-1.5 block'; label.textContent = 'Preferencia de pago';
+      const select = document.createElement('select'); select.className = 'field w-full'; select.setAttribute('aria-label', 'Preferencia de pago');
+      paymentOptions.forEach((option) => { const item = document.createElement('option'); item.value = option; item.textContent = option; select.append(item); });
+      select.value = normalizePaymentPreference(editing.terms); select.addEventListener('change', () => setEditing((current) => current ? { ...current, terms: select.value } : current));
+      field.append(label, select); section.append(field); added.push(field);
+    }
+    return () => added.forEach((element) => element.remove());
+  }, [filtered, state.config, notify, printSupplier, editing, paymentOptions]);
+  const add = () => { const name = window.prompt('Nombre del proveedor'); if (!name?.trim()) return; update((current) => ({ ...current, suppliers: [...current.suppliers, { id: `sup-${Date.now()}`, name: name.trim(), contact: '', phone: '', email: '', address: '', terms: 'Efectivo', notes: '', active: true }] })); notify('Proveedor creado'); };
+  const open = (supplier: Supplier) => setEditing({ ...supplier, terms: normalizePaymentPreference(supplier.terms) });
   const save = () => {
     if (!editing?.name.trim()) return notify('El nombre del proveedor es obligatorio');
     if (editing.email && !/^\S+@\S+\.\S+$/.test(editing.email)) return notify('Ingresa un email válido');
