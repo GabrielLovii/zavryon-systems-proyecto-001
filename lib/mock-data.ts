@@ -21,7 +21,7 @@ export type SourceCandidate = { id: string; name: string; sku: string; brand: st
 export type Source = { id: string; supplierId: string; kind: 'PDF' | 'URL'; name: string; url?: string; fileName?: string; size?: number; contentType?: string; date: string; status: ReviewStatus; notes: string; provenance: string; extractionStatus: 'Pendiente' | 'Extraído' | 'Revisión manual' | 'Error'; extractionError?: string; extractedAt?: string; candidates: SourceCandidate[] };
 
 export const today = '2026-09-21';
-export const config: AppConfig = { companyName: 'ZAVRYON SYSTEMS', productName: 'Control de Abastecimiento', clientName: 'Cliente Autoservicio Don Alejo', businessName: 'Autoservicio Don Alejo', address: 'Av. Principal 123', phone: '+54 11 5555 0101', headerNote: 'Demo local operativa' };
+export const config: AppConfig = { companyName: 'ZAVRYON SYSTEMS', productName: 'Control de Abastecimiento', clientName: 'Autoservicio Don Alejo', businessName: 'Autoservicio Don Alejo', address: 'Av. Principal 123', phone: '+54 11 5555 0101', headerNote: 'Demo local operativa' };
 export const suppliers: Supplier[] = [
   { id: 'sup-norte', name: 'Distribuciones Norte', contact: 'María Gómez', phone: '+54 11 5555 0101', email: 'compras@norte.demo', address: 'Av. Industrial 120', terms: '30 días', notes: 'Entrega en muelle 2', active: true },
   { id: 'sup-frio', name: 'FrioLogistica S.A.', contact: 'Luis Mora', phone: '+54 11 5555 0102', email: 'ventas@friolog.demo', address: 'Calle 80 10-15', terms: 'Contado', notes: '', active: true },

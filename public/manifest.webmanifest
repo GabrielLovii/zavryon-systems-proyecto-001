@@ -4,7 +4,9 @@
   "description": "Operación de pedidos y recepciones · ZAVRYON SYSTEMS",
   "start_url": "/",
   "scope": "/",
+  "id": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#071923",
   "theme_color": "#071923",
   "icons": [
@@ -13,6 +15,12 @@
       "sizes": "1280x1280",
       "type": "image/jpeg",
       "purpose": "any"
+    },
+    {
+      "src": "/logo-scpr.jpg",
+      "sizes": "1280x1280",
+      "type": "image/jpeg",
+      "purpose": "maskable"
     }
   ]
 }

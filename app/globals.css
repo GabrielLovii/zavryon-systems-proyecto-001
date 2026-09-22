@@ -31,6 +31,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { scrollbar-width: none; }
+.header-context { overflow-wrap: anywhere; }
 .print-overlay { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: rgba(3, 12, 18, .96); padding: 1.5rem; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; overflow-y: auto; background: rgba(3, 12, 18, .82); padding: 1rem; }
 .modal-card { width: min(100%, 32rem); border: 1px solid rgba(255,255,255,.15); border-radius: 1rem; background: #102a35; padding: 1.25rem; box-shadow: 0 24px 70px rgba(0,0,0,.45); }

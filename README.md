@@ -16,6 +16,14 @@ npm.cmd run dev
 
 Abrir `http://localhost:3000`. La fecha y hora visibles son las locales del dispositivo; la cabecera se actualiza después de montar en el navegador para evitar diferencias de hidratación. El saludo usa `Buenos días` de 05:00 a 11:59, `Buenas tardes` de 12:00 a 19:59 y `Buenas noches` de 20:00 a 04:59.
 
+## Instalar en Android
+
+1. Despliega la aplicación en una URL HTTPS (la URL de Vercel será la adecuada) y ábrela en Chrome Android.
+2. Abre el menú `⋮` y elige `Instalar aplicación` o `Agregar a pantalla principal`.
+3. También puedes abrir `Configuración` dentro de la app para ver la ayuda y, cuando Chrome ofrezca el evento, usar el botón de instalación.
+
+`localhost` no se puede instalar en un teléfono salvo que el teléfono acceda al equipo por la red local. La instalación requiere HTTPS en el dominio desplegado. Las notificaciones con la aplicación cerrada no se prometen: requieren Web Push, suscripción VAPID y un backend/job. Como fallback se mantienen las alertas internas y la exportación `.ics` con `VALARM`.
+
 ## Supabase
 
 La conexión preparada usa el proyecto `quigcuskwgaesizbtryv` y mantiene la demo local como fallback hasta autenticar usuarios. Para activarla, copia `.env.example` a `.env.local` y completa `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; la URL pública ya está indicada en el ejemplo. La publishable key puede estar en cliente porque RLS controla el acceso, pero nunca se debe incluir una `service_role`/secret key en el navegador, GitHub o logs.
