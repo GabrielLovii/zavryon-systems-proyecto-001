@@ -39,10 +39,10 @@ Para la comprobación manual exacta:
 3. Volver a abrir el pedido y comprobar que estado, cantidad, nota, lote y vencimiento se conservaron. Pulsar `Guardar recepción completa`; `Proveedores llegados` debe mostrar una sola llegada y `Vencimientos` el lote.
 4. Abrir `Fuentes`, registrar una URL pública o PDF menor a 10 MB. Pulsar `Revisar / extraer`. Las URL se consultan por `/api/source-preview`, que bloquea localhost, IPs privadas, esquemas no HTTP(S), redirecciones privadas y respuestas mayores a 5 MB. Editar candidatos, marcar `Aprobado` y pulsar `Confirmar aprobados`.
 5. Comprobar que el catálogo actualiza o crea productos sin duplicar por SKU/nombre y conserva proveedor y fuente. Si no se puede leer el sitio o el PDF no contiene texto extraíble, se muestra el error y se permite agregar candidatos manualmente; no se simula OCR.
-6. Recargar para verificar `localStorage` versionado v5. `Restaurar demo` devuelve también usuarios, fuentes, candidatos y usuario activo al estado inicial.
+6. Recargar para verificar `localStorage` versionado v6. Cada actualización se guarda inmediatamente y mantiene una copia de recuperación; Configuración muestra el último guardado local. `Restaurar demo` solo está en Configuración, exige confirmación doble y sobrescribe los datos locales.
 7. En `Pedidos`, pulsar `Exportar PDF` en la fila del pedido elegido. Se abre el detalle imprimible del pedido correcto; en la ventana del navegador elegir `Guardar como PDF`.
 8. En `Notificaciones`, comprobar que cada vencimiento genera reglas a 3, 2, 1 días y el día de vencimiento, y que los pedidos abiertos generan reglas a 1 día y el mismo día. `Cargar alertas demo próximas` conserva sus fechas de prueba fijas para poder validar alertas próximas sin modificar los datos iniciales; la operación normal calcula contra la fecha local real.
-9. En `Agenda`, usar filtros de tipo/estado y `Exportar .ics`. El archivo incluye eventos y `VALARM`; el usuario debe importarlo o abrirlo manualmente en Google Calendar/Outlook. En `Notificaciones`, activar preferencias y el permiso del navegador solo con el botón explícito.
+9. En `Agenda`, usar filtros de tipo/estado y `Exportar .ics`. El archivo incluye eventos y `VALARM`; el usuario debe importarlo o abrirlo manualmente en Google Calendar/Outlook. En `Notificaciones`, activar preferencias y el permiso del navegador solo con el botón explícito. La interfaz informa si Notification API está disponible, concedida o denegada y conserva alertas internas como fallback.
 10. En `Usuarios`, cambia el selector de usuario activo en la barra lateral y verifica que el saludo muestre el nombre elegido. Si el usuario guardado deja de estar activo, se usa automáticamente el primer usuario activo.
 
 ## Alcance del MVP
@@ -52,19 +52,20 @@ Para la comprobación manual exacta:
 - Pedidos recientes con estados operativos y alertas accionables.
 - Actividad reciente / historial de movimientos.
 - Datos de demostracion aislados en `lib/mock-data.ts`, listos para reemplazarse por una API.
-- Pagos tipados y persistidos con `localStorage` versionado v5; el campo `cancelled` conserva trazabilidad al anular y la sesión activa queda restaurable.
+- Pagos tipados y persistidos con `localStorage` versionado v6; cada mutación se escribe de inmediato, con backup para recuperación ante JSON corrupto o cierre inesperado. El campo `cancelled` conserva trazabilidad al anular y la sesión activa queda restaurable.
 - Totales diarios, semanales y mensuales presentados en la vista económica; esta demo usa el mismo conjunto local para los tres períodos.
 - Catálogo con búsqueda, alta/edición y asociación producto-proveedor; Fuentes conserva metadata local de PDF/URL y estados de revisión; Vencimientos permite filtrar alertas de 3 días y editar lote/fecha; Agenda e Historial reúnen los flujos y permiten exportar historial CSV.
 - Cada pedido se puede exportar desde su fila como un informe detallado de impresión con productos, recepción, diferencias, lotes, pagos y datos disponibles. La vista oculta controles y navegación al imprimir.
 - Las alertas son locales y deterministas: vencimientos a 3/2/1/0 días; entregas a 1/0 días, excluyendo pedidos `Cerrado` y `Cancelado`. Se persisten en store v5 con estados programada, activa, leída o descartada, claves únicas por fuente/regla/fecha y preferencias de navegador.
-- No hay envío real de email, WhatsApp ni push de servidor. Un backend futuro deberá generar jobs y entregar notificaciones desde una API o worker.
+- El service worker cachea el app shell y permite notificación local cuando el navegador la soporte. No se afirma funcionamiento con la app cerrada en todos los dispositivos: eso requiere Web Push, suscripción, claves VAPID y un backend/job, pendiente de interfaz Supabase Edge Functions. ICS sigue disponible con `VALARM` como fallback portable.
 
 ## Estructura
 
 - `app/`: entrada Next.js y estilos globales.
 - `components/`: layout de navegacion y dashboard.
 - `lib/mock-data.ts`: mock data separada de la presentacion.
-- `lib/demo-store.ts`: estado y persistencia local versionada de la demo (v5), preparado para reemplazarse por un adaptador API.
+- `lib/demo-store.ts`: estado y persistencia local versionada de la demo (v6), con escritura inmediata y recuperación segura.
+- `public/sw.js`: service worker para cache del app shell y soporte de notificación local.
 - `docs/MEJORAS-50.md`: backlog priorizado de capacidades.
 
 ## Alcance de fuentes

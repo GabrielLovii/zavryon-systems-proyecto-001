@@ -3,6 +3,7 @@
   "short_name": "Abastecimiento",
   "description": "Operación de pedidos y recepciones · ZAVRYON SYSTEMS",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#071923",
   "theme_color": "#071923",
