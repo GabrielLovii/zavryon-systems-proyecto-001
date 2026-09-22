@@ -14,7 +14,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Abrir `http://localhost:3000`.
+Abrir `http://localhost:3000`. La fecha y hora visibles son las locales del dispositivo; la cabecera se actualiza después de montar en el navegador para evitar diferencias de hidratación. El saludo usa `Buenos días` de 05:00 a 11:59, `Buenas tardes` de 12:00 a 19:59 y `Buenas noches` de 20:00 a 04:59.
 
 ## Supabase
 
@@ -41,8 +41,9 @@ Para la comprobación manual exacta:
 5. Comprobar que el catálogo actualiza o crea productos sin duplicar por SKU/nombre y conserva proveedor y fuente. Si no se puede leer el sitio o el PDF no contiene texto extraíble, se muestra el error y se permite agregar candidatos manualmente; no se simula OCR.
 6. Recargar para verificar `localStorage` versionado v5. `Restaurar demo` devuelve también usuarios, fuentes, candidatos y usuario activo al estado inicial.
 7. En `Pedidos`, pulsar `Exportar PDF` en la fila del pedido elegido. Se abre el detalle imprimible del pedido correcto; en la ventana del navegador elegir `Guardar como PDF`.
-8. En `Notificaciones`, comprobar que cada vencimiento genera reglas a 3, 2, 1 días y el día de vencimiento, y que los pedidos abiertos generan reglas a 1 día y el mismo día. `Cargar alertas demo próximas` deja un vencimiento y una entrega en `2026-09-22` para probarlas desde la fecha de referencia `2026-09-21`.
+8. En `Notificaciones`, comprobar que cada vencimiento genera reglas a 3, 2, 1 días y el día de vencimiento, y que los pedidos abiertos generan reglas a 1 día y el mismo día. `Cargar alertas demo próximas` conserva sus fechas de prueba fijas para poder validar alertas próximas sin modificar los datos iniciales; la operación normal calcula contra la fecha local real.
 9. En `Agenda`, usar filtros de tipo/estado y `Exportar .ics`. El archivo incluye eventos y `VALARM`; el usuario debe importarlo o abrirlo manualmente en Google Calendar/Outlook. En `Notificaciones`, activar preferencias y el permiso del navegador solo con el botón explícito.
+10. En `Usuarios`, cambia el selector de usuario activo en la barra lateral y verifica que el saludo muestre el nombre elegido. Si el usuario guardado deja de estar activo, se usa automáticamente el primer usuario activo.
 
 ## Alcance del MVP
 

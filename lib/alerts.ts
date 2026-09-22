@@ -1,5 +1,6 @@
 import type { DemoState } from './demo-store';
 import type { Expiry, Order } from './mock-data';
+import { getLocalDateISO } from './date';
 
 export const DEMO_TODAY = '2026-09-21';
 export type AlertKind = 'vencimiento' | 'entrega';
@@ -9,9 +10,9 @@ export type AppAlert = { id: string; key: string; kind: AlertKind; rule: AlertRu
 export type AlertPreferences = { expiries: boolean; deliveries: boolean; browser: boolean; notifiedKeys: string[] };
 
 const addDays = (value: string, amount: number) => { const date = new Date(`${value}T00:00:00`); date.setDate(date.getDate() + amount); return date.toISOString().slice(0, 10); };
-export const daysUntil = (value: string, reference = DEMO_TODAY) => Math.round((new Date(`${value.slice(0, 10)}T00:00:00`).getTime() - new Date(`${reference}T00:00:00`).getTime()) / 86400000);
+export const daysUntil = (value: string, reference = getLocalDateISO()) => Math.round((new Date(`${value.slice(0, 10)}T00:00:00`).getTime() - new Date(`${reference}T00:00:00`).getTime()) / 86400000);
 
-export function buildAlerts(state: Pick<DemoState, 'expiries' | 'orders' | 'suppliers' | 'products'>, reference = DEMO_TODAY, previous: AppAlert[] = []): AppAlert[] {
+export function buildAlerts(state: Pick<DemoState, 'expiries' | 'orders' | 'suppliers' | 'products'>, reference = getLocalDateISO(), previous: AppAlert[] = []): AppAlert[] {
   const generated: AppAlert[] = [];
   const previousByKey = new Map(previous.map((item) => [item.key, item]));
   const add = (item: Omit<AppAlert, 'id' | 'status' | 'createdAt'>) => {
@@ -31,9 +32,9 @@ export function buildAlerts(state: Pick<DemoState, 'expiries' | 'orders' | 'supp
   return generated;
 }
 
-export const effectiveStatus = (alert: AppAlert, reference = DEMO_TODAY): AlertStatus => alert.status === 'leída' || alert.status === 'descartada' ? alert.status : daysUntil(alert.referenceDate, reference) <= 0 ? 'activa' : 'programada';
-export const alertLabel = (alert: AppAlert, reference = DEMO_TODAY) => effectiveStatus(alert, reference);
-export function calendarIcs(alerts: AppAlert[], reference = DEMO_TODAY) {
+export const effectiveStatus = (alert: AppAlert, reference = getLocalDateISO()): AlertStatus => alert.status === 'leída' || alert.status === 'descartada' ? alert.status : daysUntil(alert.referenceDate, reference) <= 0 ? 'activa' : 'programada';
+export const alertLabel = (alert: AppAlert, reference = getLocalDateISO()) => effectiveStatus(alert, reference);
+export function calendarIcs(alerts: AppAlert[], reference = getLocalDateISO()) {
   const active = alerts.filter((alert) => effectiveStatus(alert, reference) !== 'descartada');
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ZAVRYON SYSTEMS//Alertas locales//ES', 'CALSCALE:GREGORIAN'];
   active.forEach((alert) => { const stamp = alert.referenceDate.replaceAll('-', ''); const uid = `${alert.id}@zavryon.local`; lines.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${reference.replaceAll('-', '')}T090000Z`, `DTSTART;VALUE=DATE:${stamp}`, `SUMMARY:${alert.title}`, `DESCRIPTION:${alert.detail.replaceAll('\n', ' ')}`, 'BEGIN:VALARM', 'TRIGGER:-P0D', 'ACTION:DISPLAY', `DESCRIPTION:${alert.title}`, 'END:VALARM', 'END:VEVENT'); });

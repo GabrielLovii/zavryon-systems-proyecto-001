@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { ArrowDownTrayIcon, BellAlertIcon } from '@heroicons/react/24/outline';
 import { calendarIcs, DEMO_TODAY, daysUntil, effectiveStatus, type AlertKind, type AppAlert } from '@/lib/alerts';
+import { formatDateEs, getLocalDateISO } from '@/lib/date';
 import type { DemoState } from '@/lib/demo-store';
 import type { Section } from './sidebar';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
-const dateEs = (value: string) => new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(new Date(`${value.slice(0, 10)}T00:00:00`));
+const dateEs = (value: string) => formatDateEs(value);
 const supplierName = (state: DemoState, id: string) => state.suppliers.find((item) => item.id === id)?.name || 'Sin proveedor';
 const Panel = ({ title, subtitle, children, action }: { title: string; subtitle: string; children: React.ReactNode; action?: React.ReactNode }) => <section className="rounded-2xl border border-white/10 bg-petroleum-900 p-5 shadow-panel"><div className="mb-5 flex flex-wrap items-start justify-between gap-4"><div><h3 className="font-bold text-white">{title}</h3><p className="mt-1 text-xs text-slate-400">{subtitle}</p></div>{action}</div>{children}</section>;
 const Empty = ({ children }: { children: React.ReactNode }) => <div className="rounded-xl border border-dashed border-white/15 p-10 text-center text-sm text-slate-400">{children}</div>;

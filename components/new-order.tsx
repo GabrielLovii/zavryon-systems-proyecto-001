@@ -5,11 +5,11 @@ import { MagnifyingGlassIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/ou
 import type { Order } from '@/lib/mock-data';
 import type { DemoState } from '@/lib/demo-store';
 import type { Section } from './sidebar';
+import { getLocalDateISO } from '@/lib/date';
 
 type DraftLine = { id: string; productId: string; quantity: number; price: number };
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 
-const today = '2026-09-21';
 const money = (value: number) => `$ ${value.toLocaleString('es-CO')}`;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -65,6 +65,7 @@ export function NewOrder({ state, update, notify, onNavigate }: { state: DemoSta
   const total = lines.reduce((sum, line) => sum + Math.max(0, line.quantity) * Math.max(0, line.price), 0);
   const save = () => {
     if (!supplierId || !responsible || !lines.length || lines.some((line) => !line.productId || line.quantity < 1 || line.price < 0)) return tell('Completa proveedor, responsable y todas las líneas');
+    const today = getLocalDateISO();
     const order: Order = { id: `PED-${1048 + state.orders.length + 1}`, supplierId, lines: lines.map(({ id, productId, quantity, price }) => ({ id, productId, quantity, price })), expectedDate: today, notes: '', responsible, status: 'Preparado', createdAt: today };
     update((current) => ({ ...current, orders: [...current.orders, order] }));
     tell('Pedido creado');
