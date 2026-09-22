@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { ArchiveBoxIcon, Bars3Icon, BellAlertIcon, CalendarDaysIcon, ChartBarIcon, ClipboardDocumentListIcon, ClockIcon, CubeIcon, DocumentTextIcon, HomeIcon, ShieldCheckIcon, TruckIcon, UsersIcon, WalletIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArchiveBoxIcon, Bars3Icon, BellAlertIcon, CalendarDaysIcon, ChartBarIcon, ClipboardDocumentListIcon, ClockIcon, Cog6ToothIcon, CubeIcon, DocumentTextIcon, HomeIcon, ShieldCheckIcon, TruckIcon, UsersIcon, WalletIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import { DEMO_TODAY, effectiveStatus } from '@/lib/alerts';
 
-export type Section = 'Inicio' | 'Pedidos' | 'Nuevo pedido' | 'Recepcion' | 'Proveedores' | 'Proveedores llegados' | 'Catalogo' | 'Fuentes' | 'Vencimientos' | 'Agenda' | 'Notificaciones' | 'Historial' | 'Economia' | 'Pagos' | 'Usuarios';
-const nav: [Section, typeof HomeIcon][] = [['Inicio', HomeIcon], ['Pedidos', ClipboardDocumentListIcon], ['Nuevo pedido', DocumentTextIcon], ['Recepcion', TruckIcon], ['Proveedores llegados', TruckIcon], ['Proveedores', UsersIcon], ['Catalogo', CubeIcon], ['Fuentes', DocumentTextIcon], ['Vencimientos', ClockIcon], ['Agenda', CalendarDaysIcon], ['Notificaciones', BellAlertIcon], ['Historial', ArchiveBoxIcon], ['Economia', ChartBarIcon], ['Pagos', WalletIcon], ['Usuarios', ShieldCheckIcon]];
+export type Section = 'Inicio' | 'Pedidos' | 'Nuevo pedido' | 'Recepcion' | 'Proveedores' | 'Proveedores llegados' | 'Catalogo' | 'Fuentes' | 'Vencimientos' | 'Agenda' | 'Notificaciones' | 'Historial' | 'Economia' | 'Pagos' | 'Usuarios' | 'Configuración';
+const nav: [Section, typeof HomeIcon][] = [['Inicio', HomeIcon], ['Pedidos', ClipboardDocumentListIcon], ['Nuevo pedido', DocumentTextIcon], ['Recepcion', TruckIcon], ['Proveedores llegados', TruckIcon], ['Proveedores', UsersIcon], ['Catalogo', CubeIcon], ['Fuentes', DocumentTextIcon], ['Vencimientos', ClockIcon], ['Agenda', CalendarDaysIcon], ['Notificaciones', BellAlertIcon], ['Historial', ArchiveBoxIcon], ['Economia', ChartBarIcon], ['Pagos', WalletIcon], ['Usuarios', ShieldCheckIcon], ['Configuración', Cog6ToothIcon]];
 
 export function Sidebar({ active, onNavigate, state, update }: { active: Section; onNavigate: (section: Section) => void; state: DemoState; update: (change: (state: DemoState) => DemoState) => void }) {
   const [open, setOpen] = useState(false);
