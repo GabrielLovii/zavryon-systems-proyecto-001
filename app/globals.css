@@ -31,6 +31,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { scrollbar-width: none; }
+.drawer-backdrop { position: fixed; inset: 0; z-index: 70; display: flex; justify-content: flex-end; overflow-y: auto; background: rgba(3, 12, 18, .72); }
+.order-drawer { width: min(100%, 52rem); min-height: 100%; border-left: 1px solid rgba(255,255,255,.12); background: #102a35; padding: 1.25rem; box-shadow: -24px 0 70px rgba(0,0,0,.4); }
+@media (max-width: 700px) { .order-drawer { width: 100%; padding: 1rem; } }
 .header-context { overflow-wrap: anywhere; }
 .print-overlay { position: fixed; inset: 0; z-index: 60; overflow-y: auto; background: rgba(3, 12, 18, .96); padding: 1.5rem; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; overflow-y: auto; background: rgba(3, 12, 18, .82); padding: 1rem; }
