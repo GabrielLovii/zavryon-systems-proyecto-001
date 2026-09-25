@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDownTrayIcon, CameraIcon, CheckCircleIcon, PhotoIcon, ExclamationTriangleIcon, MagnifyingGlassIcon, PlusIcon, QrCodeIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, CameraIcon, CheckCircleIcon, PhotoIcon, ExclamationTriangleIcon, PlusIcon, QrCodeIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import type { Product } from '@/lib/mock-data';
 import { createScanDetector, findByBarcode, isValidGtin, normalizeBarcode, salePrice } from '@/lib/barcode';
 import { downloadCsv, money, toNumber } from '@/lib/format';
 import { UNCATEGORIZED } from '@/lib/stock';
 import { QuickProductDialog } from './quick-create';
+import { SearchField } from './search-field';
+import { isCoarsePointer, useWakeLock, vibrate } from '@/lib/device';
 import { isBoolean, isNumber, isString, usePageHidden, usePersistentState } from '@/lib/ui-state';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
@@ -30,7 +32,7 @@ export function useGlobalScanner(onScan: (code: string) => void, enabled = true)
   const handler = useRef(onScan); handler.current = onScan;
   useEffect(() => {
     if (!enabled) return;
-    const detect = createScanDetector({ onScan: (code) => handler.current(normalizeBarcode(code)) });
+    const detect = createScanDetector({ onScan: (code) => { vibrate(35); handler.current(normalizeBarcode(code)); } });
     const onKey = (event: KeyboardEvent) => { const target = event.target as HTMLElement | null; if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return; detect(event); };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
@@ -72,6 +74,7 @@ export function ScanInput({ onScan, placeholder = 'Escaneá o escribí el códig
   const [camera, setCamera] = useState(false);
   const [cameraAvailable, setCameraAvailable] = useState(false);
   const [photoStatus, setPhotoStatus] = useState('');
+  const [touch] = useState(isCoarsePointer);
   const input = useRef<HTMLInputElement>(null);
   const photo = useRef<HTMLInputElement>(null);
   const fromPhoto = async (file: File | undefined) => {
@@ -82,11 +85,12 @@ export function ScanInput({ onScan, placeholder = 'Escaneá o escribí el códig
     finally { if (photo.current) photo.current.value = ''; }
   };
   useEffect(() => { setCameraAvailable(Boolean(window.BarcodeDetector) && Boolean(navigator.mediaDevices?.getUserMedia)); }, []);
-  const submit = (raw: string) => { const code = normalizeBarcode(raw); setValue(''); if (code) onScan(code); input.current?.focus(); };
+  // On tablets, refocusing would pop the on-screen keyboard over the results; only keep focus if it was there.
+  const submit = (raw: string) => { const code = normalizeBarcode(raw); const hadFocus = document.activeElement === input.current; setValue(''); if (code) { vibrate(35); onScan(code); } if (!touch || hadFocus) input.current?.focus(); };
   return <div>
     <label className="block text-xs font-semibold text-slate-300" htmlFor="scan-input">{label}</label>
     <div className="mt-1 flex gap-2">
-      <div className="relative min-w-0 flex-1"><QrCodeIcon aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-cyan-300" /><input id="scan-input" ref={input} className="field w-full pl-10 text-base tracking-wider" inputMode="numeric" autoComplete="off" autoFocus={autoFocus} value={value} placeholder={placeholder} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); submit(value); } }} /></div>
+      <div className="relative min-w-0 flex-1"><QrCodeIcon aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-cyan-300" /><input id="scan-input" ref={input} className="field w-full pl-10 text-base tracking-wider" inputMode="numeric" autoComplete="off" autoFocus={autoFocus && !touch} value={value} placeholder={placeholder} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); submit(value); } }} /></div>
       <button type="button" className="button-secondary" onClick={() => submit(value)} disabled={!value.trim()}>OK</button>
       {cameraAvailable && <button type="button" className="button-secondary" onClick={() => setCamera(true)} aria-label="Escanear con la cámara en vivo" title="Cámara en vivo"><CameraIcon className="h-5 w-5" /></button>}
       <button type="button" className="button-secondary" onClick={() => photo.current?.click()} aria-label="Leer código desde una foto" title="Sacar o elegir una foto"><PhotoIcon className="h-5 w-5" /><span className="hidden sm:inline">Foto</span></button>
@@ -133,6 +137,7 @@ export function BarcodeScreen({ state, update, notify, userName }: { state: Demo
     setLast({ code, valid: isValidGtin(code), at: Date.now() });
   };
   useGlobalScanner(onScan);
+  useWakeLock(true);
 
   const exportPrices = () => {
     const rows = products.map((product) => { const offer = cheapest(product); const supplier = state.suppliers.find((item) => item.id === offer?.supplierId); return [product.barcode || '', product.sku, product.name, product.category || UNCATEGORIZED, product.brand || '', offer?.presentation || product.unit, supplier?.name || '', offer?.externalCode || '', offer?.price ?? '', margin, offer ? salePrice(offer.price, margin, rounding) : '', product.stock]; });
@@ -162,7 +167,7 @@ export function BarcodeScreen({ state, update, notify, userName }: { state: Demo
       </section>
     </div>
     <section className="card min-w-0 p-5">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h3 className="font-bold text-white">Productos y códigos</h3><div className="flex flex-wrap items-center gap-2"><label className="relative"><span className="sr-only">Buscar</span><MagnifyingGlassIcon aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" /><input className="field w-full pl-9 sm:w-56" placeholder="Buscar…" value={query} onChange={(event) => setQuery(event.target.value)} /></label><label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" className="h-4 w-4 accent-cyan-400" checked={onlyMissing} onChange={(event) => setOnlyMissing(event.target.checked)} /> Solo sin código</label></div></div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><h3 className="font-bold text-white">Productos y códigos</h3><div className="flex flex-wrap items-center gap-2"><SearchField label="Buscar producto por nombre o código" className="w-full sm:w-56" placeholder="Buscar…" value={query} onChange={setQuery} /><label className="flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" className="h-4 w-4 accent-cyan-400" checked={onlyMissing} onChange={(event) => setOnlyMissing(event.target.checked)} /> Solo sin código</label></div></div>
       {list.length ? <ul className="grid gap-2 md:grid-cols-2">{list.map((product) => <li key={product.id} className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${assignTo === product.id ? 'border-cyan-300/60 bg-cyan-400/10' : 'border-white/10'}`}><div className="min-w-0"><div className="truncate font-semibold text-white">{product.name}</div><div className="text-xs text-slate-500">{product.sku} · {product.barcode ? <span className="text-emerald-300">EAN {product.barcode}</span> : 'sin código'}</div></div>{product.barcode ? <button type="button" className="link-button" onClick={() => { if (window.confirm(`¿Quitar el código ${product.barcode} de ${product.name}?`)) update((current) => ({ ...current, products: current.products.map((item) => item.id === product.id ? { ...item, barcode: undefined } : item) })); }}>Quitar</button> : <button type="button" className={assignTo === product.id ? 'button-primary' : 'button-secondary'} onClick={() => { setAssignTo(product.id); document.getElementById('scan-input')?.focus(); }}>{assignTo === product.id ? 'Escaneá ahora…' : 'Asignar'}</button>}</li>)}</ul> : <p className="rounded-xl border border-dashed border-white/15 p-6 text-center text-sm text-slate-400">{onlyMissing ? '¡Todos los productos tienen código!' : 'Sin resultados.'}</p>}
     </section>
     {creating && last && <QuickProductDialog state={state} update={update} userName={userName} onClose={() => setCreating(false)} onCreated={(product) => { setCreating(false); update((current) => ({ ...current, products: current.products.map((item) => item.id === product.id ? { ...item, barcode: last.code } : item) })); setLast({ ...last, product: { ...product, barcode: last.code } }); notify(`${product.name} creado con el código ${last.code}`); }} />}

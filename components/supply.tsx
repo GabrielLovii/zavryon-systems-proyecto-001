@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ArrowDownTrayIcon, CheckIcon, ClipboardDocumentListIcon, MagnifyingGlassIcon, MinusIcon, PlusIcon, ShoppingCartIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, CheckIcon, ClipboardDocumentListIcon, MinusIcon, PlusIcon, ShoppingCartIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import type { Product, RestockItem, StockMovementType } from '@/lib/mock-data';
 import { buildRestockOrders, compareByUrgency, groupByCategory, groupRestockBySupplier, preferredSupplier, registerMovement, stockMovementLabels, stockStatus, stockStatusLabels, stockValue, suggestedQuantity, supplierOptions, UNCATEGORIZED, type StockStatus } from '@/lib/stock';
@@ -10,6 +10,7 @@ import { getLocalDateISO, getLocalDateTimeInput } from '@/lib/date';
 import type { Section } from './sidebar';
 import { SeasonTab } from './seasonal-panel';
 import { QuickProductDialog } from './quick-create';
+import { SearchField } from './search-field';
 import { isNullableRecord, isString, isStringArray, oneOf, usePersistentState, writeUiState } from '@/lib/ui-state';
 
 /** Other screens (e.g. Inicio) deep-link to a tab by setting the remembered tab before navigating. */
@@ -64,7 +65,7 @@ export function Supply({ state, update, notify, onNavigate, userName }: Props) {
   };
 
   return <div className="space-y-6">
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+    <div className="odd-fill grid grid-cols-2 gap-3 lg:grid-cols-5">
       <SummaryCard label="Productos" value={String(active.length)} note={`${groupByCategory(active).length} categorías`} />
       <SummaryCard label="Faltantes" value={String(counts.faltante)} note="Sin stock" tone="red" />
       <SummaryCard label="Poco / bajo" value={String(counts.poco + counts.bajo)} note="En el mínimo o debajo" tone="amber" />
@@ -125,7 +126,7 @@ function StockTab({ state, update, notify, products, onMove, onRestock, userName
       </div>
     </div>
     <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px_160px]">
-      <label className="relative block"><span className="sr-only">Buscar en stock</span><MagnifyingGlassIcon aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" /><input className="field w-full pl-9" placeholder="Buscar producto, SKU, marca…" value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+      <SearchField label="Buscar en stock" className="w-full " placeholder="Buscar producto, SKU, marca…" value={query} onChange={setQuery} />
       <select aria-label="Filtrar por categoría" className="field" value={category} onChange={(event) => setCategory(event.target.value)}><option value="">Todas las categorías</option>{categories.map((item) => <option key={item}>{item}</option>)}</select>
       <select aria-label="Filtrar por estado" className="field" value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="">Todos los estados</option><option value="alerta">Con alerta</option><option value="faltante">Faltante</option><option value="poco">Poco</option><option value="bajo">Bajo</option><option value="ok">OK</option></select>
     </div>

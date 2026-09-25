@@ -6,6 +6,7 @@ import { Dashboard } from '@/components/dashboard';
 import { useDemoState } from '@/lib/demo-store';
 import { useCloudSync } from '@/lib/cloud-sync';
 import { readUiState, restoreScroll, saveScroll, usePageHidden, writeUiState } from '@/lib/ui-state';
+import { useNumberFieldComfort, useTableLabels } from '@/lib/device';
 
 const sectionFromHash = (): Section | null => {
   const value = decodeURIComponent(window.location.hash.slice(1));
@@ -19,6 +20,8 @@ export default function Home() {
   const [installed, setInstalled] = useState(false);
   const demo = useDemoState();
   const cloud = useCloudSync(demo);
+  useTableLabels();
+  useNumberFieldComfort();
 
   // The section lives in the URL hash so reloads keep the screen and the back button works. Opening the
   // installed app without a hash (start_url) returns to the last section used on this device.
@@ -38,6 +41,14 @@ export default function Home() {
     window.scrollTo({ top: 0 });
   }, []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+  useEffect(() => {
+    let start: { x: number; y: number } | null = null;
+    const onStart = (event: TouchEvent) => { const touch = event.touches[0]; start = touch.clientX < 24 && window.innerWidth < 1024 ? { x: touch.clientX, y: touch.clientY } : null; };
+    const onEnd = (event: TouchEvent) => { if (!start) return; const touch = event.changedTouches[0]; if (touch.clientX - start.x > 70 && Math.abs(touch.clientY - start.y) < 50) setMenuOpen(true); start = null; };
+    window.addEventListener('touchstart', onStart, { passive: true });
+    window.addEventListener('touchend', onEnd, { passive: true });
+    return () => { window.removeEventListener('touchstart', onStart); window.removeEventListener('touchend', onEnd); };
+  }, []);
   useEffect(() => { writeUiState('section', section); }, [section]);
 
   // Pause/resume: remember the scroll of the current screen when the app goes to the background and put it

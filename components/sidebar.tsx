@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArchiveBoxIcon, BellAlertIcon, CalendarDaysIcon, ChartBarIcon, ClipboardDocumentListIcon, ClockIcon, Cog6ToothIcon, CubeIcon, DocumentPlusIcon, DocumentTextIcon, HomeIcon, InboxArrowDownIcon, QrCodeIcon, RectangleStackIcon, ShieldCheckIcon, TruckIcon, UsersIcon, WalletIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import { DEMO_TODAY, daysUntil, effectiveStatus, latestPerSource } from '@/lib/alerts';
@@ -26,6 +26,8 @@ export function Sidebar({ active, onNavigate, state, update, open, onClose }: { 
   const activeUser = state.users.find((user) => user.id === state.activeUserId && user.active) || state.users.find((user) => user.active);
   const [referenceDate, setReferenceDate] = useState(DEMO_TODAY);
   useEffect(() => { setReferenceDate(getLocalDateISO()); }, []);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => { if (open) document.querySelector('#app-sidebar [aria-current="page"]')?.scrollIntoView({ block: 'nearest' }); }, [open, active]);
   useEffect(() => {
     if (!open) return;
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
@@ -40,7 +42,7 @@ export function Sidebar({ active, onNavigate, state, update, open, onClose }: { 
   const selectUser = (id: string) => update((current) => ({ ...current, activeUserId: id }));
   return <>
     {open && <button type="button" aria-label="Cerrar menú" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={onClose} />}
-    <aside id="app-sidebar" className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/10 bg-ink text-white shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+    <aside id="app-sidebar" onTouchStart={(event) => { touchStart.current = { x: event.touches[0].clientX, y: event.touches[0].clientY }; }} onTouchEnd={(event) => { const start = touchStart.current; touchStart.current = null; if (!start || !open) return; const dx = event.changedTouches[0].clientX - start.x; const dy = Math.abs(event.changedTouches[0].clientY - start.y); if (dx < -60 && dy < 50) onClose(); }} className={`safe-top fixed inset-y-0 left-0 z-40 flex w-72 max-w-[85vw] flex-col border-r border-white/10 bg-ink text-white shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none ${open ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
         <LogoMark className="h-11 w-11 shrink-0" />
         <div className="min-w-0 flex-1"><div className="text-[10px] font-bold uppercase tracking-[.2em] text-cyan-300">{state.config.companyName}</div><div className="text-[15px] font-bold leading-tight">{state.config.productName}</div></div>
@@ -48,7 +50,7 @@ export function Sidebar({ active, onNavigate, state, update, open, onClose }: { 
       </div>
       <nav aria-label="Módulos" className="scrollbar-none flex-1 overflow-y-auto px-3 py-4">
         {groups.map((group) => <div key={group.title} className="mb-4">
-          <div className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">{group.title}</div>
+          <div className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-400">{group.title}</div>
           {group.items.map(([section, Icon]) => {
             const count = badges[section] || 0;
             const current = active === section;
@@ -56,12 +58,12 @@ export function Sidebar({ active, onNavigate, state, update, open, onClose }: { 
               {current && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-1 rounded-r bg-cyan-400" />}
               <Icon aria-hidden="true" className={`h-5 w-5 shrink-0 ${current ? 'text-cyan-300' : ''}`} />
               <span className="min-w-0 flex-1 truncate">{sectionLabels[section]}</span>
-              {count > 0 && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-bold text-amber-950" aria-label={`${count} pendiente(s)`}>{count}</span>}
+              {count > 0 && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-bold text-amber-950" aria-label={`${count} pendiente(s)`}>{count}</span>}
             </button>;
           })}
         </div>)}
       </nav>
-      <div className="border-t border-white/10 p-4">
+      <div className="safe-bottom border-t border-white/10 p-4">
         <label className="block text-xs font-semibold text-slate-400" htmlFor="active-user">Usuario activo</label>
         <select id="active-user" className="field mt-2 w-full" value={activeUser?.id || ''} onChange={(event) => selectUser(event.target.value)}>{state.users.filter((user) => user.active).map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select>
         <div className="mt-2 text-xs text-slate-500">{activeUser?.role || 'Sin usuario activo'}</div>

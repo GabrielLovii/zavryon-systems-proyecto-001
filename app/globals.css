@@ -99,4 +99,65 @@
   @media (max-width: 700px) { .print-overlay { padding: .5rem; } .print-document { padding: 1rem; } .print-header, .print-grid, .print-two-columns { grid-template-columns: 1fr; display: grid; } .print-order-id { text-align: left; } .print-toolbar { align-items: flex-start; flex-direction: column; } .print-logo { width: 3.5rem; height: 3.5rem; } }
 }
 
+/* Tablet and touch comfort. Kept outside the layers so they win over component defaults. */
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; scroll-padding-top: 5rem; }
+  /* A long list flung to the top must not trigger the browser's pull-to-refresh by accident. */
+  body { overscroll-behavior-y: contain; font-variant-numeric: tabular-nums; }
+  button, a, [role="tab"], label, select, summary { touch-action: manipulation; }
+  ::selection { background: rgba(34,211,238,.35); color: white; }
+  input[type="search"]::-webkit-search-cancel-button { display: none; }
+  * { scrollbar-color: rgba(148,163,184,.35) transparent; scrollbar-width: thin; }
+}
+
+@layer components {
+  .button-primary:active:not(:disabled), .button-secondary:active:not(:disabled), .button-danger:active:not(:disabled), .icon-button:active, .chip:active, .stepper button:active:not(:disabled) { transform: scale(.97); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .toast { bottom: calc(1.25rem + env(safe-area-inset-bottom)); }
+  .fade-in { animation: fade-in .18s ease-out; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .modal-card, .order-drawer { animation: fade-in .18s ease-out; }
+  .back-to-top { position: fixed; right: calc(1rem + env(safe-area-inset-right)); bottom: calc(5rem + env(safe-area-inset-bottom)); z-index: 25; display: inline-flex; width: 3rem; height: 3rem; align-items: center; justify-content: center; border: 1px solid rgba(103,232,249,.35); border-radius: 9999px; background: #0b1f2e; color: #a5f3fc; box-shadow: 0 12px 30px rgba(0,0,0,.4); }
+  .toast-error { border-color: rgba(248,113,113,.55); }
+  .search-clear { position: absolute; right: .35rem; top: 50%; display: inline-flex; width: 2rem; height: 2rem; transform: translateY(-50%); align-items: center; justify-content: center; border-radius: 9999px; color: #94a3b8; }
+  .search-clear:hover { background: rgba(255,255,255,.08); color: white; }
+  /* The page behind a dialog, drawer or print preview doesn't scroll along with the finger. */
+  body:has(.modal-backdrop, .drawer-backdrop, .print-overlay) { overflow: hidden; }
+  /* Two-column summary grids: a lone last card takes the whole row instead of leaving a hole. */
+  @media (max-width: 1023px) { .odd-fill > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
+
+  /* Tables turn into labelled cards when their container is too narrow (tablet portrait, tablet
+     landscape with the menu open, phones) instead of scrolling sideways and hiding the actions. */
+  .overflow-x-auto:has(> .data-table) { container-type: inline-size; }
+  @container (max-width: 860px) {
+    .data-table { min-width: 0; font-size: .85rem; }
+    .data-table thead { display: none; }
+    .data-table, .data-table tbody, .data-table tfoot { display: block; }
+    .data-table tr { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .75rem 1rem; margin-bottom: .65rem; border: 1px solid rgba(255,255,255,.1); border-radius: .9rem; padding: .9rem; }
+    .data-table tbody tr:hover { background: transparent; border-color: rgba(103,232,249,.25); }
+    .data-table td, .data-table tfoot td { display: block; min-width: 0; border: 0; padding: 0; overflow-wrap: anywhere; }
+    .data-table td[data-label]:not([data-label=""])::before { content: attr(data-label); display: block; margin-bottom: .2rem; color: #64748b; font-size: .65rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .data-table td:first-child { grid-column: 1 / -1; }
+    .data-table td:last-child:not(:first-child) { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+    .data-table td:last-child:not(:first-child)::before { width: 100%; }
+    .data-table td:last-child > * { margin: 0 !important; }
+  }
+}
+
+/* Coarse pointers (fingers): 44px targets and 16px text in fields so iOS doesn't zoom on focus. */
+@media (pointer: coarse) {
+  .button-primary, .button-secondary, .button-danger, .field, .chip, .icon-button { min-height: 2.75rem; }
+  .icon-button { min-width: 2.75rem; }
+  .field, input, select, textarea { font-size: 1rem; }
+  .tab { min-height: 3rem; }
+  .stepper button { width: 2.75rem; height: 2.75rem; }
+  input[type="checkbox"], input[type="radio"] { width: 1.35rem; height: 1.35rem; }
+  #app-sidebar nav button { min-height: 2.9rem; }
+}
+/* Hover styles only where hovering exists, so a tapped row doesn't stay highlighted on tablets. */
+@media (hover: none) {
+  .data-table tbody tr:hover, .stock-row:hover { background: transparent; border-color: rgba(255,255,255,.08); }
+}
+
 @media print { @page { size: A4 landscape; margin: 10mm; } html, body { background: white !important; } body * { visibility: hidden !important; } .print-overlay, .print-overlay * { visibility: visible !important; } .print-overlay { position: absolute; inset: 0 auto auto 0; width: 100%; overflow: visible; padding: 0; background: white; } .print-document { max-width: none; padding: 0; } .no-print, .no-print * { display: none !important; } }

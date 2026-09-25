@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { requestPersistentStorage } from '@/lib/device';
 import { ArrowDownTrayIcon, ArrowPathIcon, ArrowUpTrayIcon, CloudIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { AppConfig } from '@/lib/mock-data';
 import type { useDemoState } from '@/lib/demo-store';
@@ -20,6 +21,8 @@ export function Settings({ demo, cloud, notify, installPromptAvailable, installe
   const [config, setConfig] = useState<AppConfig>(demo.state.config);
   const [dialog, setDialog] = useState<null | 'borrar' | 'restaurar'>(null);
   const [confirmation, setConfirmation] = useState('');
+  const [storageProtected, setStorageProtected] = useState<boolean | null>(null);
+  useEffect(() => { void requestPersistentStorage().then(setStorageProtected); }, []);
   const fileInput = useRef<HTMLInputElement>(null);
   const configChanged = JSON.stringify(config) !== JSON.stringify(demo.state.config);
 
@@ -60,9 +63,10 @@ export function Settings({ demo, cloud, notify, installPromptAvailable, installe
     <div className="grid gap-5 lg:grid-cols-2">
       <Section title="Copia de seguridad" subtitle="Un archivo con todos los datos, para guardar o pasar a otro equipo">
         <p className="text-sm text-slate-300">{demo.lastSavedAt ? `Último guardado en este dispositivo: ${new Date(demo.lastSavedAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}` : 'Guardado en este dispositivo: pendiente'}</p>
+        <p className="mt-2 text-xs text-slate-400" role="status">{storageProtected === null ? 'Este navegador no informa si protege los datos locales: descargá una copia de vez en cuando.' : storageProtected ? '✓ El navegador protege los datos de este dispositivo: no se borran aunque falte espacio.' : 'El navegador podría borrar los datos locales si falta espacio. Instalá la app o iniciá sesión en la nube para resguardarlos.'}</p>
         <div className="mt-4 flex flex-wrap gap-2"><button type="button" className="button-secondary" onClick={exportBackup}><ArrowDownTrayIcon className="h-4 w-4" /> Descargar copia</button><button type="button" className="button-secondary" onClick={() => fileInput.current?.click()}><ArrowUpTrayIcon className="h-4 w-4" /> Importar copia</button><input ref={fileInput} type="file" accept="application/json,.json" className="hidden" onChange={(event) => void importBackup(event.target.files?.[0])} /></div>
       </Section>
-      <Section title="Instalar en el celular" subtitle="Funciona como una app, con acceso directo y sin barra del navegador">
+      <Section title="Instalar en el celular o la tablet" subtitle="Funciona como una app, con acceso directo, pantalla completa y sin barra del navegador">
         {installed ? <p className="text-sm text-emerald-200" role="status">La aplicación ya está instalada en este dispositivo.</p> : installPromptAvailable ? <button type="button" className="button-primary" onClick={() => void onInstallPrompt()}>Instalar aplicación</button> : <p className="text-sm leading-6 text-slate-300">En Chrome Android: menú <strong className="text-white">⋮</strong> → <strong className="text-white">Instalar aplicación</strong> o <strong className="text-white">Agregar a pantalla principal</strong>. En iPhone: Compartir → <strong className="text-white">Agregar a inicio</strong>.</p>}
       </Section>
     </div>
