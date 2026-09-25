@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownTrayIcon, CheckIcon, ClipboardDocumentListIcon, MinusIcon, PlusIcon, ShoppingCartIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import type { Product, RestockItem, StockMovementType } from '@/lib/mock-data';
 import { buildRestockOrders, compareByUrgency, groupByCategory, groupRestockBySupplier, preferredSupplier, registerMovement, stockMovementLabels, stockStatus, stockStatusLabels, stockValue, suggestedQuantity, supplierOptions, UNCATEGORIZED, type StockStatus } from '@/lib/stock';
-import { downloadCsv, money, nextSequentialId, toNumber } from '@/lib/format';
+import { downloadCsv, money, nextSequentialId } from '@/lib/format';
 import { getLocalDateISO, getLocalDateTimeInput } from '@/lib/date';
 import type { Section } from './sidebar';
 import { SeasonTab } from './seasonal-panel';
@@ -13,6 +13,7 @@ import { QuickProductDialog } from './quick-create';
 import { SearchField } from './search-field';
 import { useEscape } from '@/lib/device';
 import { isNullableRecord, isString, isStringArray, oneOf, removeUiState, usePersistentState, writeUiState } from '@/lib/ui-state';
+import { NumberField } from './number-field';
 
 /** Other screens (e.g. Inicio) deep-link to a tab by setting the remembered tab before navigating. */
 export const openSupplyTab = (tab: Tab) => writeUiState(TAB_KEY, tab);
@@ -110,6 +111,9 @@ function StockTab({ state, update, notify, products, onMove, onRestock, userName
   });
   const groups = groupByCategory(filtered);
   const toggle = (id: string) => setSelected((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  /** Checks or unchecks a whole set (everything visible, or one category), keeping other selections. */
+  const toggleMany = (ids: string[], checked: boolean) => setSelected((current) => checked ? Array.from(new Set([...current, ...ids])) : current.filter((id) => !ids.includes(id)));
+  const visibleIds = filtered.map((product) => product.id);
   const exportStock = () => {
     downloadCsv('stock-abastecimiento.csv', ['Categoría', 'Producto', 'SKU', 'Unidad', 'Stock', 'Mínimo', 'Estado', 'Proveedor sugerido', 'Precio'], groupByCategory(products).flatMap((group) => group.products.map((product) => {
       const offer = preferredSupplier(product.id, state.supplierProducts, state.suppliers);
@@ -131,6 +135,7 @@ function StockTab({ state, update, notify, products, onMove, onRestock, userName
       <select aria-label="Filtrar por categoría" className="field" value={category} onChange={(event) => setCategory(event.target.value)}><option value="">Todas las categorías</option>{categories.map((item) => <option key={item}>{item}</option>)}</select>
       <select aria-label="Filtrar por estado" className="field" value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="">Todos los estados</option><option value="alerta">Con alerta</option><option value="faltante">Faltante</option><option value="poco">Poco</option><option value="bajo">Bajo</option><option value="ok">OK</option></select>
     </div>
+    {visibleIds.length > 0 && <div className="mt-3 flex items-center justify-between gap-2 px-1"><SelectAllBox ids={visibleIds} selected={selected} onChange={toggleMany} label={query || category || status ? `Marcar todos los filtrados (${visibleIds.length})` : `Marcar todos (${visibleIds.length})`} /></div>}
     {selected.length > 0 && <div className="sticky top-2 z-10 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/30 bg-petroleum-950/95 p-3 backdrop-blur">
       <span className="text-sm font-semibold text-white">{selected.length} seleccionado(s)</span>
       <div className="flex gap-2"><button type="button" className="button-secondary" onClick={() => setSelected([])}>Limpiar</button><button type="button" className="button-primary" onClick={() => { onRestock(products.filter((product) => selected.includes(product.id))); setSelected([]); }}><ShoppingCartIcon className="h-4 w-4" /> Agregar a Por pedir</button></div>
@@ -139,7 +144,7 @@ function StockTab({ state, update, notify, products, onMove, onRestock, userName
       {groups.map((group) => {
         const alerts = group.products.filter((product) => stockStatus(product) !== 'ok').length;
         return <div key={group.category}>
-          <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/10 pb-2"><h4 className="text-sm font-bold uppercase tracking-wider text-cyan-200">{group.category}</h4><span className="text-xs text-slate-400">{group.products.length} producto(s){alerts ? ` · ${alerts} con alerta` : ''}</span></div>
+          <div className="mb-2 flex items-center justify-between gap-2 border-b border-white/10 pb-2"><SelectAllBox ids={group.products.map((product) => product.id)} selected={selected} onChange={toggleMany} ariaLabel={`Marcar todos los de ${group.category}`} label={<h4 className="text-sm font-bold uppercase tracking-wider text-cyan-200">{group.category}</h4>} /><span className="text-xs text-slate-400">{group.products.length} producto(s){alerts ? ` · ${alerts} con alerta` : ''}</span></div>
           <ul className="space-y-2">{group.products.map((product) => <li key={product.id} className="stock-row">
             <label className="flex min-w-0 flex-1 items-center gap-3"><input type="checkbox" className="h-5 w-5 shrink-0 accent-cyan-400" checked={selected.includes(product.id)} onChange={() => toggle(product.id)} aria-label={`Seleccionar ${product.name}`} /><span className="min-w-0"><span className="block truncate font-semibold text-white">{product.name}</span><span className="block truncate text-xs text-slate-500">{product.sku} · {product.unit || 'unidad'}{product.stockUpdatedAt ? ` · actualizado ${new Date(product.stockUpdatedAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}` : ''}</span></span></label>
             <div className="flex items-center gap-3">
@@ -161,6 +166,15 @@ function StockTab({ state, update, notify, products, onMove, onRestock, userName
   </section>;
 }
 
+/** Checkbox that marks a set of products; shows a dash when only some of them are marked. */
+function SelectAllBox({ ids, selected, onChange, label, ariaLabel }: { ids: string[]; selected: string[]; onChange: (ids: string[], checked: boolean) => void; label: React.ReactNode; ariaLabel?: string }) {
+  const count = ids.filter((id) => selected.includes(id)).length;
+  const all = count > 0 && count === ids.length;
+  const box = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (box.current) box.current.indeterminate = count > 0 && !all; }, [count, all]);
+  return <label className="flex min-h-10 cursor-pointer items-center gap-3 text-sm font-semibold text-slate-200"><input ref={box} type="checkbox" className="h-5 w-5 shrink-0 accent-cyan-400" checked={all} onChange={() => onChange(ids, !all)} aria-label={ariaLabel} />{label}</label>;
+}
+
 function MovementDialog({ product, onClose: close, onSave: save }: { product: Product; onClose: () => void; onSave: (type: StockMovementType, quantity: number, reason: string) => void }) {
   // What was typed survives a reload; once saved or cancelled it is forgotten.
   const forget = () => ['type', 'quantity', 'reason'].forEach((field) => removeUiState(`movement:${product.id}:${field}`));
@@ -175,7 +189,7 @@ function MovementDialog({ product, onClose: close, onSave: save }: { product: Pr
     <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="movement-title">
       <div className="flex items-start justify-between gap-3"><div><h3 id="movement-title" className="text-lg font-bold text-white">{product.name}</h3><p className="mt-1 text-xs text-slate-400">Stock actual: {product.stock} · mínimo {product.minimum}</p></div><button type="button" className="icon-button" aria-label="Cerrar" onClick={onClose}><XMarkIcon className="h-5 w-5" /></button></div>
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{(['ajuste', 'entrada', 'salida', 'faltante'] as StockMovementType[]).map((option) => <button key={option} type="button" aria-pressed={type === option} className={`chip ${type === option ? 'chip-active' : ''}`} onClick={() => { setType(option); setQuantity(option === 'ajuste' ? product.stock : option === 'faltante' ? 0 : 1); }}>{option === 'ajuste' ? 'Conteo' : stockMovementLabels[option]}</button>)}</div>
-      {type !== 'faltante' && <label className="mt-4 block text-xs font-semibold text-slate-300">{type === 'ajuste' ? '¿Cuántos hay ahora?' : type === 'entrada' ? '¿Cuántos entraron?' : '¿Cuántos salieron?'}<input className="field mt-1 w-full text-lg" type="number" inputMode="numeric" min="0" autoFocus value={quantity} onChange={(event) => setQuantity(toNumber(event.target.value))} /></label>}
+      {type !== 'faltante' && <label className="mt-4 block text-xs font-semibold text-slate-300">{type === 'ajuste' ? '¿Cuántos hay ahora?' : type === 'entrada' ? '¿Cuántos entraron?' : '¿Cuántos salieron?'}<NumberField className="field mt-1 w-full text-lg" autoFocus decimals={false} value={quantity} onChange={setQuantity} /></label>}
       <label className="mt-3 block text-xs font-semibold text-slate-300">Motivo o nota (opcional)<input className="field mt-1 w-full" placeholder="Ej.: “Nos quedan 2”, venta, rotura, conteo de cierre" value={reason} onChange={(event) => setReason(event.target.value)} /></label>
       <p className="mt-3 text-sm text-slate-300">Quedará en <strong className="text-white">{preview}</strong> <StatusBadge product={{ stock: preview, minimum: product.minimum }} /></p>
       <div className="mt-5 flex justify-end gap-2"><button type="button" className="button-secondary" onClick={onClose}>Cancelar</button><button type="button" className="button-primary" onClick={() => onSave(type, quantity, reason)}><CheckIcon className="h-4 w-4" /> Guardar</button></div>
@@ -234,7 +248,7 @@ function RestockTab({ state, update, notify, onNavigate, userName, onGoStock }: 
           const offers = supplierOptions(item.productId, state.supplierProducts, state.suppliers);
           return <li key={item.productId} className="grid gap-3 rounded-xl border border-white/10 p-3 sm:grid-cols-[minmax(0,1fr)_110px_minmax(0,220px)_auto] sm:items-center">
             <div className="min-w-0"><div className="truncate font-semibold text-white">{product?.name || 'Producto eliminado'}</div><div className="text-xs text-slate-500">Stock {product?.stock ?? 0} · mín. {product?.minimum ?? 0}{product && <> · <StatusBadge product={product} /></>}</div></div>
-            <label className="text-xs font-semibold text-slate-400">Cantidad<input className="field mt-1 w-full" type="number" inputMode="numeric" min="1" value={item.quantity} onChange={(event) => setItem(item.productId, { quantity: toNumber(event.target.value, 1) })} /></label>
+            <label className="text-xs font-semibold text-slate-400">Cantidad<NumberField className="field mt-1 w-full" min={1} decimals={false} value={item.quantity} onChange={(amount) => setItem(item.productId, { quantity: amount })} /></label>
             <label className="text-xs font-semibold text-slate-400">Proveedor<select className="field mt-1 w-full" value={item.supplierId} onChange={(event) => setItem(item.productId, { supplierId: event.target.value })}><option value="">Sin proveedor</option>{offers.map((offer) => <option key={offer.id} value={offer.supplierId}>{state.suppliers.find((entry) => entry.id === offer.supplierId)?.name} · {money(offer.price)}</option>)}{!offers.length && state.suppliers.filter((entry) => entry.active).map((entry) => <option key={entry.id} value={entry.id}>{entry.name} (sin precio)</option>)}</select></label>
             <button type="button" className="icon-button justify-self-end" aria-label={`Quitar ${product?.name || 'producto'} de la lista`} onClick={() => remove(item.productId)}><TrashIcon className="h-5 w-5" /></button>
           </li>;
