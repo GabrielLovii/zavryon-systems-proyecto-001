@@ -7,6 +7,9 @@ out/
 build/
 dist/
 
+# Copied from pdfjs-dist on predev/prebuild
+public/pdf.worker.min.mjs
+
 # TypeScript build cache
 *.tsbuildinfo
 

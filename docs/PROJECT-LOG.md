@@ -40,3 +40,14 @@ Toda modificación futura debe añadir una entrada aquí **antes de reportar la 
 | Verificación | Pendiente de ejecutar en este cambio: YAML estructural, `npm ci`, build, tipos y tests cuando el entorno lo permita. |
 | Despliegue | No desplegado; este cambio no modifica comportamiento de aplicación. |
 | Rollback | Revertir el commit de documentación/workflow; el procedimiento completo está en `docs/ROLLBACK.md`. |
+
+### 2026-09-24 — fix: la app no respondía (CSP), PDFs y worker de pdf.js
+
+| Campo | Detalle |
+|---|---|
+| Cambio | CSP con `script-src 'unsafe-inline'` (Next.js App Router usa scripts inline), `style-src`, `connect-src` a Supabase y `worker-src`; worker de pdf.js servido desde `public/`; ventanas de PDF de pagos/proveedores ya no usan `noopener` (devolvía `null`) y el de proveedor imprime sin esperar `load`. |
+| Por qué | El CSP `default-src 'self'` bloqueaba la hidratación: la página se veía pero no se podía usar. Extracción de PDF y exportación de PDFs también fallaban. |
+| Archivos | `next.config.mjs`, `lib/pdf-extractor.ts`, `components/payment-pdf.tsx`, `components/supplier-pdf.tsx`, `package.json`, `.gitignore`. |
+| Verificación | `npm ci`, `npm run build`, `npx tsc --noEmit`, `npm test` (10/10) y headers verificados con `next start`. |
+| Despliegue | Vercel desde `main`. |
+| Rollback | Revertir este commit según `docs/ROLLBACK.md`. |
