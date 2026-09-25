@@ -7,11 +7,12 @@ import type { Order, OrderLine } from '@/lib/mock-data';
 import { money, toNumber } from '@/lib/format';
 import { orderStage, stageLabels } from '@/lib/order-flow';
 import { QuickProductDialog } from './quick-create';
+import { isNullableRecord, usePersistentState } from '@/lib/ui-state';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 
 export function OrderEditor({ order, state, update, onClose, notify = () => undefined, userName = '' }: { order: Order; state: DemoState; update: Mutate; onClose: () => void; notify?: (message: string) => void; userName?: string }) {
-  const [draft, setDraft] = useState(order);
+  const [draft, setDraft] = usePersistentState<Order>(`order-editor:${order.id}`, order, (value) => isNullableRecord(value) && value !== null && (value as Order).id === order.id);
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');

@@ -10,12 +10,14 @@ import { getLocalDateISO, getLocalDateTimeInput } from '@/lib/date';
 import type { Section } from './sidebar';
 import { SeasonTab } from './seasonal-panel';
 import { QuickProductDialog } from './quick-create';
+import { isNullableRecord, isString, isStringArray, oneOf, usePersistentState, writeUiState } from '@/lib/ui-state';
 
-export const openSupplyTab = (tab: Tab) => { try { window.sessionStorage.setItem(TAB_KEY, tab); } catch { /* Falls back to the default tab. */ } };
+/** Other screens (e.g. Inicio) deep-link to a tab by setting the remembered tab before navigating. */
+export const openSupplyTab = (tab: Tab) => writeUiState(TAB_KEY, tab);
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 type Tab = 'stock' | 'faltantes' | 'pedir' | 'temporada' | 'movimientos';
-const TAB_KEY = 'zavryon-supply-tab';
+const TAB_KEY = 'supply:tab';
 type Props = { state: DemoState; update: Mutate; notify: (message: string) => void; onNavigate: (section: Section) => void; userName: string };
 
 const statusClass: Record<StockStatus, string> = { faltante: 'badge-red', poco: 'badge-red', bajo: 'badge-amber', ok: 'badge-green' };
@@ -28,8 +30,7 @@ function StatusBadge({ product }: { product: Pick<Product, 'stock' | 'minimum'> 
 }
 
 export function Supply({ state, update, notify, onNavigate, userName }: Props) {
-  // Other screens (e.g. Inicio) can deep-link to a tab through sessionStorage.
-  const [tab, setTab] = useState<Tab>(() => { try { const saved = window.sessionStorage.getItem(TAB_KEY) as Tab | null; window.sessionStorage.removeItem(TAB_KEY); return saved && tabs.some((item) => item.id === saved) ? saved : 'stock'; } catch { return 'stock'; } });
+  const [tab, setTab] = usePersistentState<Tab>(TAB_KEY, 'stock', oneOf(tabs.map((item) => item.id)));
   const active = useMemo(() => state.products.filter((product) => product.active), [state.products]);
   const missing = useMemo(() => active.filter((product) => stockStatus(product) !== 'ok').sort(compareByUrgency), [active]);
   const counts = useMemo(() => active.reduce((acc, product) => ({ ...acc, [stockStatus(product)]: acc[stockStatus(product)] + 1 }), { faltante: 0, poco: 0, bajo: 0, ok: 0 } as Record<StockStatus, number>), [active]);
@@ -91,11 +92,11 @@ function SummaryCard({ label, value, note, tone = 'slate' }: { label: string; va
 }
 
 function StockTab({ state, update, notify, products, onMove, onRestock, userName }: { state: DemoState; update: Mutate; notify: (message: string) => void; products: Product[]; onMove: (product: Product, type: StockMovementType, quantity: number, reason?: string) => void; onRestock: (products: Product[]) => void; userName: string }) {
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('');
-  const [status, setStatus] = useState<'' | StockStatus | 'alerta'>('');
-  const [selected, setSelected] = useState<string[]>([]);
-  const [editing, setEditing] = useState<Product | null>(null);
+  const [query, setQuery] = usePersistentState('supply:query', '', isString);
+  const [category, setCategory] = usePersistentState('supply:category', '', isString);
+  const [status, setStatus] = usePersistentState<'' | StockStatus | 'alerta'>('supply:status', '', oneOf(['', 'alerta', 'faltante', 'poco', 'bajo', 'ok']));
+  const [selected, setSelected] = usePersistentState<string[]>('supply:selected', [], isStringArray);
+  const [editing, setEditing] = usePersistentState<Product | null>('supply:moving', null, isNullableRecord);
   const [adding, setAdding] = useState(false);
   const categories = useMemo(() => groupByCategory(products).map((group) => group.category), [products]);
   const filtered = products.filter((product) => {
@@ -237,8 +238,8 @@ function RestockTab({ state, update, notify, onNavigate, userName, onGoStock }: 
 }
 
 function MovementsTab({ state }: { state: DemoState }) {
-  const [productId, setProductId] = useState('');
-  const [type, setType] = useState<'' | StockMovementType>('');
+  const [productId, setProductId] = usePersistentState('movements:product', '', isString);
+  const [type, setType] = usePersistentState<'' | StockMovementType>('movements:type', '', isString);
   const rows = [...state.stockMovements].reverse().filter((movement) => (!productId || movement.productId === productId) && (!type || movement.type === type));
   const productName = (id: string) => state.products.find((product) => product.id === id)?.name || 'Producto eliminado';
   const exportRows = () => downloadCsv('movimientos-stock.csv', ['Fecha', 'Producto', 'Tipo', 'Cambio', 'Antes', 'Después', 'Motivo', 'Usuario'], rows.map((row) => [new Date(row.date).toLocaleString('es-AR'), productName(row.productId), stockMovementLabels[row.type], row.quantity, row.before, row.after, row.reason, row.user]));

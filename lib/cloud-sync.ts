@@ -64,6 +64,7 @@ export function useCloudSync(demo: Demo) {
   const stateRef = useRef(demo.state); stateRef.current = demo.state;
   const busy = useRef(false);
   const ready = useRef(false);
+  const conflictRef = useRef(conflict); conflictRef.current = conflict;
   const userId = session?.user.id;
 
   const markSynced = useCallback((uid: string, revision: number, state: DemoState) => {
@@ -150,13 +151,22 @@ export function useCloudSync(demo: Demo) {
   // Catch up when coming back online or returning to the app (changes made on another device).
   useEffect(() => {
     if (!userId) return;
+    // While hidden (tablet asleep, other app in front) nothing runs: no polling timer. Before going to the
+    // background, unsynced edits are uploaded right away instead of waiting for the debounce.
+    let interval = 0;
+    const startPolling = () => { window.clearInterval(interval); interval = window.setInterval(() => { void pull(); }, 60_000); };
     const onOnline = () => { void pull(); };
-    const onVisible = () => { if (document.visibilityState === 'visible') void pull(); };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { void pull(); startPolling(); return; }
+      window.clearInterval(interval);
+      const meta = readMeta();
+      if (ready.current && !conflictRef.current && !(meta?.userId === userId && meta.hash === stateHash(comparable(stateRef.current)))) void push();
+    };
     window.addEventListener('online', onOnline);
-    document.addEventListener('visibilitychange', onVisible);
-    const interval = window.setInterval(() => { if (document.visibilityState === 'visible') void pull(); }, 60_000);
-    return () => { window.removeEventListener('online', onOnline); document.removeEventListener('visibilitychange', onVisible); window.clearInterval(interval); };
-  }, [userId, pull]);
+    document.addEventListener('visibilitychange', onVisibility);
+    if (document.visibilityState === 'visible') startPolling();
+    return () => { window.removeEventListener('online', onOnline); document.removeEventListener('visibilitychange', onVisibility); window.clearInterval(interval); };
+  }, [userId, pull, push]);
 
   const resolveConflict = useCallback(async (keep: 'nube' | 'local') => {
     if (!conflict || !userId) return;

@@ -8,6 +8,7 @@ import { createScanDetector, findByBarcode, isValidGtin, normalizeBarcode, saleP
 import { downloadCsv, money, toNumber } from '@/lib/format';
 import { UNCATEGORIZED } from '@/lib/stock';
 import { QuickProductDialog } from './quick-create';
+import { isBoolean, isNumber, isString, usePageHidden, usePersistentState } from '@/lib/ui-state';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 type BarcodeDetectorLike = { detect: (source: CanvasImageSource | ImageBitmap) => Promise<{ rawValue: string }[]> };
@@ -41,6 +42,8 @@ function CameraScanner({ onDetect, onClose }: { onDetect: (code: string) => void
   const video = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState('');
   const detected = useRef(onDetect); detected.current = onDetect;
+  // Never keep the camera on in the background: closing unmounts this and stops every track.
+  usePageHidden(onClose);
   useEffect(() => {
     let stream: MediaStream | null = null; let frame = 0; let stopped = false;
     const start = async () => {
@@ -101,11 +104,11 @@ type ScanResult = { code: string; product?: Product; valid: boolean | null; at: 
 export function BarcodeScreen({ state, update, notify, userName }: { state: DemoState; update: Mutate; notify: (message: string) => void; userName: string }) {
   const [last, setLast] = useState<ScanResult | null>(null);
   const [assignTo, setAssignTo] = useState('');
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePersistentState('barcode:query', '', isString);
   const [creating, setCreating] = useState(false);
-  const [margin, setMargin] = useState(35);
-  const [rounding, setRounding] = useState(10);
-  const [onlyMissing, setOnlyMissing] = useState(true);
+  const [margin, setMargin] = usePersistentState('barcode:margin', 35, isNumber);
+  const [rounding, setRounding] = usePersistentState('barcode:rounding', 10, isNumber);
+  const [onlyMissing, setOnlyMissing] = usePersistentState('barcode:only-missing', true, isBoolean);
   const products = useMemo(() => state.products.filter((product) => product.active).sort((a, b) => a.name.localeCompare(b.name, 'es')), [state.products]);
   const withCode = products.filter((product) => product.barcode).length;
   const pending = products.filter((product) => !product.barcode);

@@ -68,6 +68,16 @@ export function usePersistentState<T>(key: string, initial: T | (() => T), isVal
   return [value, setValue];
 }
 
+/** Validators for restored values: anything else falls back to the default instead of breaking the screen. */
+export const isString = (value: unknown) => typeof value === 'string';
+export const isNumber = (value: unknown) => typeof value === 'number' && Number.isFinite(value);
+export const isBoolean = (value: unknown) => typeof value === 'boolean';
+export const isNullableString = (value: unknown) => value === null || typeof value === 'string';
+export const isStringArray = (value: unknown) => Array.isArray(value) && value.every((item) => typeof item === 'string');
+export const oneOf = (options: readonly unknown[]) => (value: unknown) => options.includes(value);
+/** A record being edited (must have a string id) or nothing. */
+export const isNullableRecord = (value: unknown) => value === null || (Boolean(value) && typeof value === 'object' && !Array.isArray(value) && typeof (value as { id?: unknown }).id === 'string');
+
 const SCROLL_KEY = 'scroll';
 type ScrollMap = Record<string, number>;
 const isScrollMap = (value: unknown) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);

@@ -7,6 +7,7 @@ import type { Product } from '@/lib/mock-data';
 import { buildCombos, seasonFor, seasonInfo, seasonalRecommendations, upcomingEvents, type ComboSuggestion, type EventKind, type Recommendation } from '@/lib/seasonal';
 import { stockStatusLabels } from '@/lib/stock';
 import { money, toNumber } from '@/lib/format';
+import { isBoolean, isNumber, usePersistentState } from '@/lib/ui-state';
 
 const actionLabel: Record<Recommendation['action'], string> = { reforzar: 'Reforzar stock', ofertar: 'Buen momento para ofertar', combo: 'Armar combo / promo' };
 const actionClass: Record<Recommendation['action'], string> = { reforzar: 'badge-red', ofertar: 'badge-green', combo: 'badge-amber' };
@@ -32,8 +33,8 @@ function ComboCard({ combo, onCopy }: { combo: ComboSuggestion; onCopy: (combo: 
 
 export function SeasonTab({ state, onRestock, notify = () => undefined }: { state: DemoState; onRestock: (products: Product[]) => void; notify?: (message: string) => void }) {
   const today = useToday();
-  const [margin, setMargin] = useState(35);
-  const [showPaydays, setShowPaydays] = useState(false);
+  const [margin, setMargin] = usePersistentState('season:margin', 35, isNumber);
+  const [showPaydays, setShowPaydays] = usePersistentState('season:paydays', false, isBoolean);
   const recommendations = useMemo(() => today ? seasonalRecommendations(state.products, state.stockMovements, today, 24) : [], [state.products, state.stockMovements, today]);
   const calendar = useMemo(() => today ? upcomingEvents(today, 90, showPaydays) : [], [today, showPaydays]);
   const combos = useMemo(() => {
