@@ -5,6 +5,7 @@ import { config, initialExpiries, initialOrders, initialPayments, initialRecepti
 import type { AlertPreferences, AppAlert } from './alerts';
 import { canImportCandidate, normalizeSourceCandidate } from './source-validation';
 import { isValidLocalDateISO, isValidLocalDateTimeInput } from './date';
+import { clearUiState } from './ui-state';
 
 export const DEMO_STORAGE_KEY = 'zavryon-abastecimiento-demo-v7';
 export const DEMO_SAVED_AT_KEY = 'zavryon-abastecimiento-demo-v6-saved-at';
@@ -36,7 +37,11 @@ export function useDemoState() {
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceStatus, setPersistenceStatus] = useState<'pendiente' | 'guardado' | 'recuperado' | 'error'>('pendiente');
   const stateRef = useRef(state); stateRef.current = state;
+  // Screens run effects (e.g. alert generation) before this hook reads storage. Writing before that read
+  // would overwrite the user's saved data with the demo seed, so nothing is persisted until hydration ends.
+  const hydratedRef = useRef(false);
   const persist = (next: DemoState) => {
+    if (!hydratedRef.current) return;
     try {
       const serialized = JSON.stringify(next);
       const previous = window.localStorage.getItem(DEMO_STORAGE_KEY);
@@ -59,12 +64,13 @@ export function useDemoState() {
        if (loaded) { setState(loaded); const savedAt = window.localStorage.getItem(DEMO_SAVED_AT_KEY); setLastSavedAt(savedAt); setPersistenceStatus(read(DEMO_STORAGE_KEY) ? 'guardado' : 'recuperado'); }
     } catch {
       try { const recovered = read(DEMO_BACKUP_KEY); if (recovered) { setState(recovered); setPersistenceStatus('recuperado'); } else setPersistenceStatus('error'); } catch { setPersistenceStatus('error'); }
-     } finally { setHydrated(true); }
+     } finally { hydratedRef.current = true; setHydrated(true); }
   }, []);
   useEffect(() => { if (!hydrated) return; const timer = window.setTimeout(() => persist(state), 250); const flush = () => persist(stateRef.current); window.addEventListener('visibilitychange', flush); window.addEventListener('pagehide', flush); return () => { window.clearTimeout(timer); window.removeEventListener('visibilitychange', flush); window.removeEventListener('pagehide', flush); }; }, [hydrated, state]);
   const update = useCallback((change: (current: DemoState) => DemoState) => setState((current) => { const next = change(current); const persisted = { ...next, sources: next.sources.map((source) => ({ ...source, candidates: source.candidates.map((candidate) => normalizeSourceCandidate(candidate)) })) }; const unsafeApproved = persisted.sources.some((source) => source.candidates.some((candidate) => candidate.status === 'Aprobado' && !canImportCandidate(candidate))); if (unsafeApproved) { setPersistenceStatus('error'); return current; } persist(persisted); return persisted; }), []);
-  const restoreDemo = useCallback(() => { const next = initialDemoState(); setState(next); persist(next); }, []);
-  const clearLocalData = useCallback(() => { const next = emptyDemoState(); setState(next); persist(next); }, []);
+  // Saved screens point at records that no longer exist after a reset, so they start clean too.
+  const restoreDemo = useCallback(() => { const next = initialDemoState(); clearUiState(); setState(next); persist(next); }, []);
+  const clearLocalData = useCallback(() => { const next = emptyDemoState(); clearUiState(); setState(next); persist(next); }, []);
   /** Replaces the whole state (cloud download, backup import). Returns false if the snapshot is invalid. */
   const replaceState = useCallback((value: unknown) => { const next = normalizeDemoState(value); if (!next) return false; setState(next); persist(next); return true; }, []);
   return useMemo(() => ({ state, hydrated, update, restoreDemo, clearLocalData, replaceState, lastSavedAt, persistenceStatus }), [state, hydrated, update, restoreDemo, clearLocalData, replaceState, lastSavedAt, persistenceStatus]);
