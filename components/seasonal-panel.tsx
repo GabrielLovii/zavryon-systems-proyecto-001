@@ -6,8 +6,9 @@ import type { DemoState } from '@/lib/demo-store';
 import type { Product } from '@/lib/mock-data';
 import { buildCombos, seasonFor, seasonInfo, seasonalRecommendations, upcomingEvents, type ComboSuggestion, type EventKind, type Recommendation } from '@/lib/seasonal';
 import { stockStatusLabels } from '@/lib/stock';
-import { money, toNumber } from '@/lib/format';
+import { money } from '@/lib/format';
 import { isBoolean, isNumber, usePersistentState } from '@/lib/ui-state';
+import { NumberField } from './number-field';
 
 const actionLabel: Record<Recommendation['action'], string> = { reforzar: 'Reforzar stock', ofertar: 'Buen momento para ofertar', combo: 'Armar combo / promo' };
 const actionClass: Record<Recommendation['action'], string> = { reforzar: 'badge-red', ofertar: 'badge-green', combo: 'badge-amber' };
@@ -63,7 +64,7 @@ export function SeasonTab({ state, onRestock, notify = () => undefined }: { stat
       </section>
 
       <section className="card min-w-0 p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="flex items-center gap-2 font-bold text-white"><GiftIcon className="h-5 w-5 text-amber-300" /> Combos sugeridos con tus productos</h3><label className="flex items-center gap-2 text-xs font-semibold text-slate-300">Margen %<input className="field w-20" type="number" inputMode="decimal" min="0" value={margin} onChange={(event) => setMargin(toNumber(event.target.value))} /></label></div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="flex items-center gap-2 font-bold text-white"><GiftIcon className="h-5 w-5 text-amber-300" /> Combos sugeridos con tus productos</h3><label className="flex items-center gap-2 text-xs font-semibold text-slate-300">Margen %<NumberField className="field w-20" value={margin} onChange={setMargin} /></label></div>
         <p className="mt-1 text-xs text-slate-400">Precio de cada producto = costo del proveedor más barato + margen. El combo aplica el descuento sin bajar del 10% sobre el costo.</p>
         {combos.length ? <ul className="mt-4 grid gap-3 md:grid-cols-2">{combos.map((combo) => <ComboCard key={combo.name} combo={combo} onCopy={(item) => void copy(item)} />)}</ul> : <p className="mt-4 rounded-xl border border-dashed border-white/15 p-6 text-center text-sm text-slate-400">Todavía no hay productos suficientes para armar combos de esta época. Cargá productos de las categorías sugeridas (bebidas, almacén, golosinas…).</p>}
       </section>

@@ -5,12 +5,13 @@ import { ArrowDownTrayIcon, CameraIcon, CheckCircleIcon, PhotoIcon, ExclamationT
 import type { DemoState } from '@/lib/demo-store';
 import type { Product } from '@/lib/mock-data';
 import { createScanDetector, findByBarcode, isValidGtin, normalizeBarcode, salePrice } from '@/lib/barcode';
-import { downloadCsv, money, toNumber } from '@/lib/format';
+import { downloadCsv, money } from '@/lib/format';
 import { UNCATEGORIZED } from '@/lib/stock';
 import { QuickProductDialog } from './quick-create';
 import { SearchField } from './search-field';
 import { isCoarsePointer, useEscape, useWakeLock, vibrate } from '@/lib/device';
 import { isBoolean, isNumber, isString, usePageHidden, usePersistentState } from '@/lib/ui-state';
+import { NumberField } from './number-field';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 type BarcodeDetectorLike = { detect: (source: CanvasImageSource | ImageBitmap) => Promise<{ rawValue: string }[]> };
@@ -162,7 +163,7 @@ export function BarcodeScreen({ state, update, notify, userName }: { state: Demo
       <section className="card min-w-0 p-5">
         <h3 className="font-bold text-white">Lista de precios para exportar</h3>
         <p className="mt-1 text-xs text-slate-400">CSV con código de barras, costo del proveedor más barato y precio de venta con tu margen. Se abre en Excel o se importa en otro sistema.</p>
-        <div className="mt-4 grid grid-cols-2 gap-3"><label className="text-xs font-semibold text-slate-300">Margen %<input className="field mt-1 w-full" type="number" inputMode="decimal" min="0" value={margin} onChange={(event) => setMargin(toNumber(event.target.value))} /></label><label className="text-xs font-semibold text-slate-300">Redondear a<select className="field mt-1 w-full" value={rounding} onChange={(event) => setRounding(Number(event.target.value))}><option value={0}>Sin redondeo</option><option value={10}>$ 10</option><option value={50}>$ 50</option><option value={100}>$ 100</option></select></label></div>
+        <div className="mt-4 grid grid-cols-2 gap-3"><label className="text-xs font-semibold text-slate-300">Margen %<NumberField className="field mt-1 w-full" value={margin} onChange={setMargin} /></label><label className="text-xs font-semibold text-slate-300">Redondear a<select className="field mt-1 w-full" value={rounding} onChange={(event) => setRounding(Number(event.target.value))}><option value={0}>Sin redondeo</option><option value={10}>$ 10</option><option value={50}>$ 50</option><option value={100}>$ 100</option></select></label></div>
         <div className="mt-4 flex items-center justify-between gap-3"><span className="text-sm text-slate-300">{withCode} de {products.length} productos con código</span><button type="button" className="button-primary" onClick={exportPrices}><ArrowDownTrayIcon className="h-4 w-4" /> Exportar CSV</button></div>
         <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-cyan-400" style={{ width: `${products.length ? (withCode / products.length) * 100 : 0}%` }} /></div>
       </section>

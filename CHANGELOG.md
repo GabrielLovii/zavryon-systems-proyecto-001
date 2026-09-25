@@ -4,6 +4,9 @@ Resumen corto; consultar [`docs/PROJECT-LOG.md`](docs/PROJECT-LOG.md) para el de
 
 ## 2026-09-25
 
+- **fix** — Montos: al borrar ya no aparece un 0; se aceptan "1.500" y "12,50". CSV con punto y coma y coma decimal para Excel en español (Argentina).
+- **feat** — Stock: "Marcar todos" (respeta búsqueda y filtros) y casilla por categoría.
+
 - **fix** — Recargar ya no reemplaza los datos guardados por la demo.
 - **feat** — Tablet, pausar y retomar donde lo dejaste, y 100 mejoras de uso ([`docs/MEJORAS-100.md`](docs/MEJORAS-100.md)).
 

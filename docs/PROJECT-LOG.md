@@ -73,6 +73,16 @@ Toda modificación futura debe añadir una entrada aquí **antes de reportar la 
 | Verificación | Build con la variable sin prefijo incorpora la clave; `npm test` 41/41. |
 | Rollback | Revertir el commit y volver a cargar las variables `NEXT_PUBLIC_*`. |
 
+### 2026-09-25 — fix + feat: montos en pesos, CSV para Excel y "marcar todos"
+
+| Campo | Detalle |
+|---|---|
+| Cambio | Campos de montos y cantidades (`components/number-field.tsx`): al borrar no aparece 0, aceptan notación argentina ("1.500", "12,50") y aplican el mínimo al salir del campo. CSV con `;` y coma decimal (`toCsv`). Stock: "Marcar todos" (con filtros) y casilla por categoría con estado parcial. |
+| Por qué | Pedido del propietario: el 0 aparecía al borrar un monto; la app trabaja en pesos argentinos; marcar todos los productos. |
+| Archivos | `components/{number-field,supply,dashboard,barcode,order-editor,new-order,quick-create,seasonal-panel}.tsx`, `lib/format.ts`, `tests/format.test.mjs`. |
+| Verificación | `tsc`, `next lint`, `npm test` 59/59, `next build`; E2E montos/marcar todos/CSV 13/13, reanudación 10/10, comodidad 18/18, flujos 13 + 17 + 9; sin errores JS. |
+| Rollback | Revertir los dos commits de esta entrada. |
+
 ### 2026-09-25 — fix + feat: datos que no se pisan, tablet, pausa/retomar y 100 mejoras
 
 | Campo | Detalle |

@@ -5,7 +5,7 @@ import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import { paymentPreferences, type Product, type Supplier, type SupplierProduct } from '@/lib/mock-data';
 import { nextInternalSku } from '@/lib/stock';
-import { toNumber } from '@/lib/format';
+import { NumberField } from './number-field';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
@@ -73,10 +73,10 @@ export function QuickProductDialog({ state, update, supplierId: fixedSupplierId,
       </>}
       <Label text="Presentación"><input className="field mt-1 w-full" value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="Caja x 12, 1 kg…" /></Label>
       {supplierId && <Label text="Código del proveedor"><input className="field mt-1 w-full" value={supplierCode} onChange={(event) => setSupplierCode(event.target.value)} placeholder="Opcional" /></Label>}
-      {supplierId && <Label text="Precio de compra *"><input className="field mt-1 w-full" type="number" inputMode="decimal" min="0" step="0.01" value={price || ''} placeholder="0" onChange={(event) => setPrice(toNumber(event.target.value))} /></Label>}
+      {supplierId && <Label text="Precio de compra *"><NumberField className="field mt-1 w-full" value={price} onChange={setPrice} /></Label>}
       {!existing && <>
-        <Label text="Stock actual"><input className="field mt-1 w-full" type="number" inputMode="numeric" min="0" value={stock} onChange={(event) => setStock(toNumber(event.target.value))} /></Label>
-        <Label text="Avisar cuando queden (mínimo)"><input className="field mt-1 w-full" type="number" inputMode="numeric" min="0" value={minimum} onChange={(event) => setMinimum(toNumber(event.target.value))} /></Label>
+        <Label text="Stock actual"><NumberField className="field mt-1 w-full" decimals={false} value={stock} onChange={setStock} /></Label>
+        <Label text="Avisar cuando queden (mínimo)"><NumberField className="field mt-1 w-full" decimals={false} value={minimum} onChange={setMinimum} /></Label>
       </>}
       {error && <p role="alert" className="text-sm text-red-300 sm:col-span-2">{error}</p>}
       <div className="flex justify-end gap-2 sm:col-span-2"><button type="button" className="button-secondary" onClick={onClose}>Cancelar</button><button type="submit" className="button-primary"><CheckIcon className="h-4 w-4" /> {existing ? 'Vincular y agregar' : 'Crear producto'}</button></div>

@@ -11,6 +11,7 @@ import { nextSequentialId } from '@/lib/format';
 import { stockStatus, stockStatusLabels, suggestedQuantity } from '@/lib/stock';
 import { withStatus } from '@/lib/order-flow';
 import { QuickProductDialog, QuickSupplierDialog } from './quick-create';
+import { NumberField } from './number-field';
 
 type DraftLine = { id: string; productId: string; quantity: number; price: number };
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
@@ -128,8 +129,8 @@ export function NewOrder({ state, update, notify, onNavigate }: { state: DemoSta
      <div className="mt-6 space-y-3">
        {lines.map((line, index) => { const product = state.products.find((item) => item.id === line.productId); return <div key={line.id} className="grid gap-3 rounded-xl border border-white/10 p-4 md:grid-cols-[minmax(0,2fr)_120px_160px_120px_auto] md:items-end">
          <Field label={`Producto ${index + 1}`}><select className="field w-full" value={line.productId} onChange={(event) => changeLineProduct(line.id, event.target.value)}>{productResults.map(({ product: option }) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></Field>
-         <Field label="Cantidad"><input className="field w-full" type="number" inputMode="decimal" min="1" value={line.quantity} onChange={(event) => updateLine(line.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} /></Field>
-         <Field label="Precio unitario"><input className="field w-full" type="number" inputMode="decimal" min="0" step="0.01" value={line.price} onChange={(event) => updateLine(line.id, { price: Math.max(0, Number(event.target.value) || 0) })} /></Field>
+         <Field label="Cantidad"><NumberField className="field w-full" min={1} value={line.quantity} onChange={(amount) => updateLine(line.id, { quantity: amount })} /></Field>
+         <Field label="Precio unitario"><NumberField className="field w-full" value={line.price} onChange={(amount) => updateLine(line.id, { price: amount })} /></Field>
          <div className="text-sm text-slate-300"><span className="block text-xs font-semibold text-slate-500">Subtotal</span>{money(Math.max(0, line.quantity) * Math.max(0, line.price))}<span className="mt-1 block text-xs text-slate-500">{product?.unit || 'Unidad'}</span></div>
          <button type="button" className="button-secondary" onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))}><TrashIcon className="h-4 w-4" /> Quitar</button>
        </div>; })}

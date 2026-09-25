@@ -4,11 +4,12 @@ import { useCallback, useEffect, useMemo, useState, type SetStateAction } from '
 import { ExclamationTriangleIcon, MagnifyingGlassIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import type { Order, OrderLine } from '@/lib/mock-data';
-import { money, toNumber } from '@/lib/format';
+import { money } from '@/lib/format';
 import { orderStage, stageLabels } from '@/lib/order-flow';
 import { QuickProductDialog } from './quick-create';
 import { isNullableRecord, usePersistentState } from '@/lib/ui-state';
 import { stateHash } from '@/lib/cloud-sync';
+import { NumberField } from './number-field';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 
@@ -83,8 +84,8 @@ export function OrderEditor({ order, state, update, onClose, notify = () => unde
 
       <div className="mt-5 space-y-3">{draft.lines.map((line) => { const product = state.products.find((item) => item.id === line.productId); return <div key={line.id} className="grid gap-3 rounded-xl border border-white/10 p-4 sm:grid-cols-[minmax(0,1fr)_100px_140px_auto] sm:items-end">
         <div className="text-sm font-semibold text-white">{product?.name || 'Producto eliminado'}<span className="mt-1 block text-xs font-normal text-slate-500">{product?.sku || 'Sin código'} · subtotal {money(line.quantity * line.price)}</span>{product && !offered.has(product.id) && <span className="mt-1 flex items-center gap-1 text-xs font-normal text-amber-300"><ExclamationTriangleIcon className="h-4 w-4" /> No está en la lista de este proveedor</span>}</div>
-        <label className="text-xs font-semibold text-slate-300">Cantidad<input className="field mt-1 w-full" type="number" inputMode="numeric" min="1" value={line.quantity} onChange={(event) => setLine(line.id, { quantity: toNumber(event.target.value, 1) })} /></label>
-        <label className="text-xs font-semibold text-slate-300">Precio<input className="field mt-1 w-full" type="number" inputMode="decimal" min="0" step="0.01" value={line.price} onChange={(event) => setLine(line.id, { price: toNumber(event.target.value) })} /></label>
+        <label className="text-xs font-semibold text-slate-300">Cantidad<NumberField className="field mt-1 w-full" min={1} decimals={false} value={line.quantity} onChange={(amount) => setLine(line.id, { quantity: amount })} /></label>
+        <label className="text-xs font-semibold text-slate-300">Precio<NumberField className="field mt-1 w-full" value={line.price} onChange={(amount) => setLine(line.id, { price: amount })} /></label>
         <button type="button" className="button-danger" aria-label={`Quitar ${product?.name || 'línea'}`} onClick={() => setDraft((current) => ({ ...current, lines: current.lines.filter((item) => item.id !== line.id) }))}><TrashIcon className="h-4 w-4" /> Quitar</button>
       </div>; })}{!draft.lines.length && <p className="rounded-xl border border-dashed border-white/15 p-6 text-center text-sm text-slate-400">Sin productos. Agregá desde la lista del proveedor.</p>}</div>
 
