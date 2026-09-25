@@ -62,3 +62,10 @@ test('productsFromJson finds product-like records at any depth', () => {
   assert.equal(found[0].product.price?.value, 3250);
   assert.equal(found[0].product.brand, 'Rosamonte');
 });
+
+test('parseLine ignores dashboard labels and document numbers', () => {
+  assert.equal(parseLine('$ 275.400 recibido'), null);
+  assert.equal(parseLine('PED-1048 · Distribuciones Norte'), null);
+  assert.equal(parseLine('FAC-00012 Total $ 1.500'), null);
+  assert.equal(parseLine('Yerba 1 kg $ 3.250')?.name, 'Yerba 1 kg');
+});

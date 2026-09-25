@@ -101,7 +101,8 @@ function visibleText(doc: Document) {
   doc.querySelectorAll('script,style,noscript,nav,header,footer,svg,template').forEach((node) => node.remove());
   doc.querySelectorAll('td,th').forEach((node) => node.append('\t'));
   doc.querySelectorAll('br,p,div,li,tr,h1,h2,h3,h4,h5,h6,section,article,dt,dd').forEach((node) => node.append('\n'));
-  const text = doc.body?.textContent?.trim() ? doc.body.textContent : doc.documentElement?.textContent || '';
+  const body = (() => { try { return doc.body; } catch { return null; } })(); // Some parsers throw when the document has no root left.
+  const text = body?.textContent?.trim() ? body.textContent : doc.documentElement?.textContent || '';
   return text.split('\n').map((line) => line.replace(/[  ]+/g, ' ').trim()).filter(Boolean).join('\n');
 }
 
@@ -134,12 +135,17 @@ export function extractHtml(input: string, sourceId: string, baseUrl?: string): 
   });
 
   // 3. Visible tables, mapping columns by their header.
+  const skippedTables: Element[] = [];
   doc.querySelectorAll('table').forEach((table, tableIndex) => {
     let roles: (ColumnRole | null)[] | null = null;
     Array.from(table.querySelectorAll('tr')).forEach((row, rowIndex) => {
       const cells = Array.from(row.querySelectorAll('th,td')).map((cell) => cell.textContent?.replace(/\s+/g, ' ').trim() || '');
       const header = headerRoles(cells);
       if (header) { roles = header; return; }
+      // A table whose header row doesn't describe products (orders, schedules…) is skipped entirely.
+      const isHeaderRow = row.querySelectorAll('td').length === 0 && row.querySelectorAll('th').length > 1;
+      if (isHeaderRow && !roles) { roles = []; skippedTables.push(table); return; }
+      if (roles && !roles.length) return;
       const columns: (ColumnRole | null)[] | null = roles;
       const product = parseCells(cells, columns && cells.length === columns.length ? columns : null);
       if (product && (product.price || product.sku)) candidates.push(makeCandidate(`${sourceId}-table-${tableIndex}-${rowIndex}`, product, evidence('Tabla visible', cells.join(' | '), 'HTML table', `${tableIndex}:${rowIndex}`), 'table', imageFrom(row.querySelector('img'))));
@@ -150,6 +156,7 @@ export function extractHtml(input: string, sourceId: string, baseUrl?: string): 
   const extra: string[] = [];
   const looksLikeApp = Boolean(doc.querySelector('#root,#__next,#app,[data-reactroot]'));
   if (!candidates.length) {
+    skippedTables.forEach((table) => table.remove());
     candidates.push(...textCandidates(visibleText(doc), sourceId, 'Texto visible'));
     if (candidates.length) extra.push('No había datos estructurados: se leyó el texto visible de la página, revisá cada candidato.');
   }

@@ -7,8 +7,8 @@ type PdfState = {
   config: { companyName: string; clientName: string };
   orders: Order[];
   suppliers: { id: string; name: string; contact: string; phone: string; email: string; address: string; terms: string; notes: string; active: boolean }[];
-  products: { id: string; name: string; sku: string; unit: string }[];
-  supplierProducts: { supplierId: string; productId: string; presentation?: string }[];
+  products: { id: string; name: string; sku: string; unit: string; barcode?: string }[];
+  supplierProducts: { supplierId: string; productId: string; presentation?: string; externalCode?: string }[];
   receptions: { orderId: string; lines: ReceptionLine[] }[];
   payments: { orderId?: string; amount: number; date: string; method: string; status: PaymentStatus; reference: string; notes: string; cancelled?: boolean }[];
 };
@@ -42,7 +42,7 @@ export function OrderPdf({ state, orderId, onClose }: { state: PdfState; orderId
     </div>
     <article className="print-document">
       <header className="print-header">
-          <div className="print-brand"><img src="/logo-scpr.jpg" alt="Logo SCPR" className="print-logo" /><div><div className="print-company">{state.config.companyName}</div><h1>Control de Abastecimiento</h1><p>{state.config.clientName} · Detalle de pedido</p></div></div>
+          <div className="print-brand"><img src="/icon.svg" alt="Logo" className="print-logo" /><div><div className="print-company">{state.config.companyName}</div><h1>Control de Abastecimiento</h1><p>{state.config.clientName} · Detalle de pedido</p></div></div>
         <div className="print-order-id"><span>ID del pedido</span><strong>{order.id}</strong></div>
       </header>
        <section className="print-grid">
@@ -50,12 +50,13 @@ export function OrderPdf({ state, orderId, onClose }: { state: PdfState; orderId
          <div><strong>Creación</strong><span>{dateEs(order.createdAt)}</span><strong>Entrega prevista</strong><span>{dateEs(order.expectedDate)}</span></div>
          <div><strong>Solicitante</strong><span>{order.requester || (order.responsible ? `Legacy · responsable (${order.responsible})` : 'Legacy / no registrado')}</span><strong>Solicitado el</strong><span>{order.requestedAt ? `${dateEs(order.requestedAt)} · ${order.requestedAt.slice(11, 16)}` : order.createdAt ? `Legacy · creación (${dateEs(order.createdAt)})` : 'Legacy / no registrado'}</span><strong>Responsable</strong><span>{display(order.responsible)}</span><strong>Estado</strong><span>{display(order.status)}</span></div>
       </section>
-      <section className="print-section"><h2>Productos</h2><div className="print-table-wrap"><table className="print-table"><thead><tr><th>SKU</th><th>Producto / presentación</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th><th>Recepción</th><th>Recibida</th><th>Diferencia</th><th>Lote / vencimiento</th></tr></thead><tbody>{order.lines.map((line) => {
+      <section className="print-section"><h2>Productos</h2><div className="print-table-wrap"><table className="print-table"><thead><tr><th>Códigos</th><th>Producto / presentación</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th><th>Recepción</th><th>Recibida</th><th>Diferencia</th><th>Lote / vencimiento</th></tr></thead><tbody>{order.lines.map((line) => {
         const product = state.products.find((item) => item.id === line.productId);
         const presentation = state.supplierProducts.find((item) => item.supplierId === order.supplierId && item.productId === line.productId)?.presentation || product?.unit;
         const received = reception?.lines.find((item) => item.orderLineId === line.id);
         const difference = received ? received.received - line.quantity : 0;
-        return <tr key={line.id}><td>{display(product?.sku)}</td><td><strong>{display(product?.name)}</strong><small>{display(presentation)}</small></td><td>{line.quantity}</td><td>{money(line.price)}</td><td>{money(line.price * line.quantity)}</td><td>{receptionLabels[received?.status || 'pending']}</td><td>{received?.received ?? 0}</td><td>{received ? difference > 0 ? `+${difference} sobrante` : difference < 0 ? `${Math.abs(difference)} faltante` : 'Sin diferencia' : 'Pendiente'}</td><td>{received ? `${display(received.lot)} / ${dateEs(received.expiry)}` : 'Pendiente'}</td></tr>;
+        const supplierCode = state.supplierProducts.find((item) => item.supplierId === order.supplierId && item.productId === line.productId)?.externalCode;
+        return <tr key={line.id}><td>{display(product?.sku)}{product?.barcode && <small>EAN {product.barcode}</small>}{supplierCode && <small>Prov. {supplierCode}</small>}</td><td><strong>{display(product?.name)}</strong><small>{display(presentation)}</small></td><td>{line.quantity}</td><td>{money(line.price)}</td><td>{money(line.price * line.quantity)}</td><td>{receptionLabels[received?.status || 'pending']}</td><td>{received?.received ?? 0}</td><td>{received ? difference > 0 ? `+${difference} sobrante` : difference < 0 ? `${Math.abs(difference)} faltante` : 'Sin diferencia' : 'Pendiente'}</td><td>{received ? `${display(received.lot)} / ${dateEs(received.expiry)}` : 'Pendiente'}</td></tr>;
       })}</tbody><tfoot><tr><td colSpan={4}>Total del pedido</td><td>{money(order.lines.reduce((sum, line) => sum + line.price * line.quantity, 0))}</td><td colSpan={4} /></tr></tfoot></table></div></section>
       <section className="print-two-columns">
         <div className="print-section"><h2>Observaciones</h2><p>{display(order.notes)}</p></div>

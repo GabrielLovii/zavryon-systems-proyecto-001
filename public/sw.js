@@ -1,5 +1,5 @@
-const CACHE = 'zavryon-app-shell-v4';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/logo-scpr.jpg'];
+const CACHE = 'zavryon-app-shell-v5';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/icon-192.png'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then(async (cache) => {
     await Promise.all(APP_SHELL.map(async (url) => { try { await cache.add(url); } catch { /* Network unavailable during install. */ } }));

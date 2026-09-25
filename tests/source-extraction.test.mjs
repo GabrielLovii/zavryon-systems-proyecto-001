@@ -85,3 +85,8 @@ test('a real price-list PDF produces one candidate per product row', async () =>
   ]);
   assert.equal(result.candidates[0].unit, 'Pack x 6');
 });
+
+test('tables whose header is not about products (orders, schedules) are ignored', () => {
+  const html = '<table><thead><tr><th>Pedido</th><th>Proveedor</th><th>Total</th><th>Estado</th></tr></thead><tbody><tr><td>PED-1048</td><td>Distribuciones Norte</td><td>$ 515.200</td><td>Enviado</td></tr></tbody></table>';
+  assert.equal(extractHtml(html, 'src-orders').candidates.length, 0);
+});

@@ -1,21 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArchiveBoxIcon, BellAlertIcon, CalendarDaysIcon, ChartBarIcon, ClipboardDocumentListIcon, ClockIcon, Cog6ToothIcon, CubeIcon, DocumentPlusIcon, DocumentTextIcon, HomeIcon, InboxArrowDownIcon, RectangleStackIcon, ShieldCheckIcon, TruckIcon, UsersIcon, WalletIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ArchiveBoxIcon, BellAlertIcon, CalendarDaysIcon, ChartBarIcon, ClipboardDocumentListIcon, ClockIcon, Cog6ToothIcon, CubeIcon, DocumentPlusIcon, DocumentTextIcon, HomeIcon, InboxArrowDownIcon, QrCodeIcon, RectangleStackIcon, ShieldCheckIcon, TruckIcon, UsersIcon, WalletIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import { DEMO_TODAY, daysUntil, effectiveStatus, latestPerSource } from '@/lib/alerts';
 import { getLocalDateISO } from '@/lib/date';
 import { needsRestock } from '@/lib/stock';
 import { LogoMark } from './logo';
 
-export type Section = 'Inicio' | 'Abastecimiento' | 'Pedidos' | 'Nuevo pedido' | 'Recepcion' | 'Proveedores' | 'Proveedores llegados' | 'Catalogo' | 'Fuentes' | 'Vencimientos' | 'Agenda' | 'Notificaciones' | 'Historial' | 'Economia' | 'Pagos' | 'Usuarios' | 'Configuración';
+export type Section = 'Inicio' | 'Abastecimiento' | 'Pedidos' | 'Nuevo pedido' | 'Recepcion' | 'Proveedores' | 'Proveedores llegados' | 'Catalogo' | 'Codigos' | 'Fuentes' | 'Vencimientos' | 'Agenda' | 'Notificaciones' | 'Historial' | 'Economia' | 'Pagos' | 'Usuarios' | 'Configuración';
 
 /** Human labels (with accents) for each section; the keys stay stable for navigation and deep links. */
-export const sectionLabels: Record<Section, string> = { Inicio: 'Inicio', Abastecimiento: 'Abastecimiento', Pedidos: 'Pedidos', 'Nuevo pedido': 'Nuevo pedido', Recepcion: 'Recepción', Proveedores: 'Proveedores', 'Proveedores llegados': 'Proveedores llegados', Catalogo: 'Catálogo', Fuentes: 'Fuentes de catálogos', Vencimientos: 'Vencimientos', Agenda: 'Agenda', Notificaciones: 'Notificaciones', Historial: 'Historial', Economia: 'Economía', Pagos: 'Pagos', Usuarios: 'Usuarios', Configuración: 'Configuración' };
+export const sectionLabels: Record<Section, string> = { Inicio: 'Inicio', Abastecimiento: 'Abastecimiento', Pedidos: 'Pedidos', 'Nuevo pedido': 'Nuevo pedido', Recepcion: 'Recepción', Proveedores: 'Proveedores', 'Proveedores llegados': 'Proveedores llegados', Catalogo: 'Catálogo', Codigos: 'Códigos de barras', Fuentes: 'Fuentes de catálogos', Vencimientos: 'Vencimientos', Agenda: 'Agenda', Notificaciones: 'Notificaciones', Historial: 'Historial', Economia: 'Economía', Pagos: 'Pagos', Usuarios: 'Usuarios', Configuración: 'Configuración' };
 
 const groups: { title: string; items: [Section, typeof HomeIcon][] }[] = [
   { title: 'Operación', items: [['Inicio', HomeIcon], ['Abastecimiento', RectangleStackIcon], ['Pedidos', ClipboardDocumentListIcon], ['Nuevo pedido', DocumentPlusIcon], ['Recepcion', InboxArrowDownIcon], ['Proveedores llegados', TruckIcon]] },
-  { title: 'Catálogo y proveedores', items: [['Proveedores', UsersIcon], ['Catalogo', CubeIcon], ['Fuentes', DocumentTextIcon]] },
+  { title: 'Catálogo y proveedores', items: [['Proveedores', UsersIcon], ['Catalogo', CubeIcon], ['Codigos', QrCodeIcon], ['Fuentes', DocumentTextIcon]] },
   { title: 'Seguimiento', items: [['Vencimientos', ClockIcon], ['Agenda', CalendarDaysIcon], ['Notificaciones', BellAlertIcon], ['Historial', ArchiveBoxIcon]] },
   { title: 'Finanzas', items: [['Economia', ChartBarIcon], ['Pagos', WalletIcon]] },
   { title: 'Administración', items: [['Usuarios', ShieldCheckIcon], ['Configuración', Cog6ToothIcon]] },

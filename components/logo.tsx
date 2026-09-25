@@ -2,7 +2,7 @@ import { useId } from 'react';
 
 /**
  * Simplified SCPR mark (cycle arrows + box + check) that stays legible at small sizes.
- * The full illustrated logo (/logo-scpr.jpg) is kept for large placements such as PDFs.
+ * Used everywhere: sidebar, header, PDFs, favicon and PWA icons.
  * Keep in sync with public/icon.svg.
  */
 export function LogoMark({ className = 'h-10 w-10', title = 'SCPR · Control de Abastecimiento' }: { className?: string; title?: string }) {

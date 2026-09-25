@@ -11,7 +11,7 @@ export type PaymentStatus = 'pendiente' | 'parcial' | 'pagado' | 'vencido';
 
 export type AppConfig = { companyName: string; productName: string; clientName: string; businessName: string; address: string; phone: string; headerNote: string };
 export type Supplier = { id: string; name: string; contact: string; phone: string; email: string; address: string; terms: string; notes: string; active: boolean };
-export type Product = { id: string; name: string; sku: string; brand?: string; category: string; unit: string; stock: number; minimum: number; active: boolean; currency?: string; availability?: string; expiry?: string; sourceId?: string; stockUpdatedAt?: string; location?: string; imageUrl?: string };
+export type Product = { id: string; name: string; sku: string; brand?: string; category: string; unit: string; stock: number; minimum: number; active: boolean; currency?: string; availability?: string; expiry?: string; sourceId?: string; stockUpdatedAt?: string; location?: string; imageUrl?: string; barcode?: string };
 export type SupplierProduct = { id: string; supplierId: string; productId: string; price: number; currency?: string; externalCode?: string; brand?: string; category?: string; presentation?: string; unit?: string; availability?: string; minimum?: number; active: boolean };
 export type OrderLine = { id: string; productId: string; quantity: number; price: number };
 export type Order = { id: string; supplierId: string; lines: OrderLine[]; expectedDate: string; notes: string; responsible: string; requester?: string; requestedAt?: string; status: OrderStatus; createdAt: string; events?: OrderEvent[] };

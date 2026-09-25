@@ -117,13 +117,18 @@ export function parseLine(line: string): ParsedProduct | null {
   const text = line.replace(/\s+/g, ' ').trim();
   if (text.length < 3 || text.length > 300 || !/[a-záéíóúñ]{3,}/i.test(text)) return null;
   const price = findPrice(text);
-  const sku = findSku(text);
+  const found = findSku(text);
+  // Document numbers (orders, invoices, delivery notes) are not product codes.
+  const isDocumentNumber = /^(PED|PAG|REC|FAC|OC|NC|ND|REM|PRE)[-_]?\d+$/i.test(found);
+  const sku = isDocumentNumber ? '' : found;
   if (!price && !sku) return null;
   let name = text;
   if (price) name = name.replace(price.raw, ' ');
-  if (sku) name = name.replace(sku, ' ');
+  if (found) name = name.replace(found, ' ');
   name = cleanName(name.replace(/\$\s*$/, ''));
   if (!name || !/[a-záéíóúñ]{3,}/i.test(name) || NOISE_START.test(name) || NOISE_ANYWHERE.test(name)) return null;
+  // A single loose word ("recibido", "total") is a label, not a product; real names have 2+ words or a size/number.
+  if (name.split(/\s+/).filter((word) => /[a-záéíóúñ]/i.test(word)).length < 2 && !/\d/.test(name)) return null;
   return { name, sku, price, brand: '', unit: findUnit(name), category: '' };
 }
 

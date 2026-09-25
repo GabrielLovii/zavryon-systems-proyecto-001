@@ -125,3 +125,13 @@ export function registerMovement(product: Product, type: StockMovementType, quan
 export function stockValue(products: Product[], supplierProducts: SupplierProduct[], suppliers: Supplier[]) {
   return products.reduce((sum, product) => sum + Math.max(0, product.stock) * (preferredSupplier(product.id, supplierProducts, suppliers)?.price || 0), 0);
 }
+
+/** Next free internal product code (ZAV-000001…), unique regardless of supplier codes. */
+export function nextInternalSku(products: Pick<Product, 'sku'>[]) {
+  const used = new Set(products.map((product) => product.sku.trim().toUpperCase()).filter(Boolean));
+  const highest = products.reduce((max, product) => { const match = /^ZAV-(\d+)$/i.exec(product.sku.trim()); return match ? Math.max(max, Number(match[1])) : max; }, 0);
+  let sequence = highest + 1;
+  let sku = '';
+  do { sku = `ZAV-${String(sequence++).padStart(6, '0')}`; } while (used.has(sku));
+  return sku;
+}

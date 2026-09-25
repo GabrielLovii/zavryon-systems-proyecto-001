@@ -9,6 +9,7 @@ import { downloadCsv, money, nextSequentialId, toNumber } from '@/lib/format';
 import { getLocalDateISO, getLocalDateTimeInput } from '@/lib/date';
 import type { Section } from './sidebar';
 import { SeasonTab } from './seasonal-panel';
+import { QuickProductDialog } from './quick-create';
 
 export const openSupplyTab = (tab: Tab) => { try { window.sessionStorage.setItem(TAB_KEY, tab); } catch { /* Falls back to the default tab. */ } };
 
@@ -79,7 +80,7 @@ export function Supply({ state, update, notify, onNavigate, userName }: Props) {
     {tab === 'stock' && <StockTab state={state} update={update} notify={notify} products={active} onMove={move} onRestock={(items) => { addToRestock(items); setTab('pedir'); }} userName={userName} />}
     {tab === 'faltantes' && <MissingTab state={state} products={missing} onRestock={(items) => { addToRestock(items); setTab('pedir'); }} onMove={move} />}
     {tab === 'pedir' && <RestockTab state={state} update={update} notify={notify} onNavigate={onNavigate} userName={userName} onGoStock={() => setTab('faltantes')} />}
-    {tab === 'temporada' && <SeasonTab state={state} onRestock={(items) => { addToRestock(items); setTab('pedir'); }} />}
+    {tab === 'temporada' && <SeasonTab state={state} notify={notify} onRestock={(items) => { addToRestock(items); setTab('pedir'); }} />}
     {tab === 'movimientos' && <MovementsTab state={state} />}
   </div>;
 }
@@ -153,16 +154,7 @@ function StockTab({ state, update, notify, products, onMove, onRestock, userName
       {!groups.length && <p className="rounded-xl border border-dashed border-white/15 p-8 text-center text-sm text-slate-400">{products.length ? 'No hay productos que coincidan con el filtro.' : 'Todavía no hay mercadería anotada. Tocá “Anotar producto” para empezar.'}</p>}
     </div>
     {editing && <MovementDialog product={editing} onClose={() => setEditing(null)} onSave={(type, quantity, reason) => { onMove(editing, type, quantity, reason); setEditing(null); }} />}
-    {adding && <QuickProductDialog state={state} categories={categories} onClose={() => setAdding(false)} onSave={(product, supplierId, price) => {
-      update((current) => ({
-        ...current,
-        products: [...current.products, product],
-        supplierProducts: supplierId ? [...current.supplierProducts, { id: `sp-${Date.now()}`, supplierId, productId: product.id, price, externalCode: product.sku, presentation: product.unit, active: true }] : current.supplierProducts,
-        stockMovements: [...current.stockMovements, { id: `mov-${Date.now()}-${product.id}`, productId: product.id, type: 'ajuste' as const, quantity: product.stock, before: 0, after: product.stock, reason: 'Alta de producto', user: userName, date: new Date().toISOString() }],
-      }));
-      setAdding(false);
-      notify(`${product.name} anotado en ${product.category || UNCATEGORIZED}`);
-    }} />}
+    {adding && <QuickProductDialog state={state} update={update} userName={userName} onClose={() => setAdding(false)} onCreated={(product) => { setAdding(false); notify(`${product.name} anotado en ${product.category || UNCATEGORIZED}`); }} />}
   </section>;
 }
 
@@ -179,43 +171,6 @@ function MovementDialog({ product, onClose, onSave }: { product: Product; onClos
       <label className="mt-3 block text-xs font-semibold text-slate-300">Motivo o nota (opcional)<input className="field mt-1 w-full" placeholder="Ej.: “Nos quedan 2”, venta, rotura, conteo de cierre" value={reason} onChange={(event) => setReason(event.target.value)} /></label>
       <p className="mt-3 text-sm text-slate-300">Quedará en <strong className="text-white">{preview}</strong> <StatusBadge product={{ stock: preview, minimum: product.minimum }} /></p>
       <div className="mt-5 flex justify-end gap-2"><button type="button" className="button-secondary" onClick={onClose}>Cancelar</button><button type="button" className="button-primary" onClick={() => onSave(type, quantity, reason)}><CheckIcon className="h-4 w-4" /> Guardar</button></div>
-    </div>
-  </div>;
-}
-
-function QuickProductDialog({ state, categories, onClose, onSave }: { state: DemoState; categories: string[]; onClose: () => void; onSave: (product: Product, supplierId: string, price: number) => void }) {
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [unit, setUnit] = useState('unidad');
-  const [stock, setStock] = useState(0);
-  const [minimum, setMinimum] = useState(5);
-  const [supplierId, setSupplierId] = useState('');
-  const [price, setPrice] = useState(0);
-  const [error, setError] = useState('');
-  const save = () => {
-    const cleanName = name.trim();
-    if (!cleanName) return setError('Escribí el nombre del producto.');
-    if (state.products.some((product) => product.name.trim().toLocaleLowerCase('es') === cleanName.toLocaleLowerCase('es'))) return setError('Ya existe un producto con ese nombre. Buscalo en el stock y registrá el movimiento.');
-    const used = new Set(state.products.map((product) => product.sku));
-    let sequence = state.products.length + 1;
-    let sku = '';
-    do { sku = `ZAV-${String(sequence++).padStart(6, '0')}`; } while (used.has(sku));
-    onSave({ id: `prod-${Date.now()}`, name: cleanName, sku, category: category.trim(), unit: unit.trim() || 'unidad', stock, minimum, active: true, currency: 'ARS', stockUpdatedAt: new Date().toISOString() }, supplierId, price);
-  };
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="quick-product-title">
-      <div className="flex items-start justify-between gap-3"><h3 id="quick-product-title" className="text-lg font-bold text-white">Anotar producto</h3><button type="button" className="icon-button" aria-label="Cerrar" onClick={onClose}><XMarkIcon className="h-5 w-5" /></button></div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-xs font-semibold text-slate-300 sm:col-span-2">Producto *<input className="field mt-1 w-full" autoFocus value={name} onChange={(event) => { setName(event.target.value); setError(''); }} placeholder="Ej.: Coca-Cola 2,25 L" /></label>
-        <label className="text-xs font-semibold text-slate-300">Categoría<input className="field mt-1 w-full" list="stock-categories" value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Bebidas, Almacén…" /><datalist id="stock-categories">{categories.filter((item) => item !== UNCATEGORIZED).map((item) => <option key={item} value={item} />)}</datalist></label>
-        <label className="text-xs font-semibold text-slate-300">Unidad<input className="field mt-1 w-full" value={unit} onChange={(event) => setUnit(event.target.value)} /></label>
-        <label className="text-xs font-semibold text-slate-300">Stock actual<input className="field mt-1 w-full" type="number" inputMode="numeric" min="0" value={stock} onChange={(event) => setStock(toNumber(event.target.value))} /></label>
-        <label className="text-xs font-semibold text-slate-300">Avisar cuando queden (mínimo)<input className="field mt-1 w-full" type="number" inputMode="numeric" min="0" value={minimum} onChange={(event) => setMinimum(toNumber(event.target.value))} /></label>
-        <label className="text-xs font-semibold text-slate-300">Proveedor habitual<select className="field mt-1 w-full" value={supplierId} onChange={(event) => setSupplierId(event.target.value)}><option value="">Sin definir</option>{state.suppliers.filter((supplier) => supplier.active).map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select></label>
-        <label className="text-xs font-semibold text-slate-300">Precio de compra<input className="field mt-1 w-full" type="number" inputMode="decimal" min="0" disabled={!supplierId} value={price} onChange={(event) => setPrice(toNumber(event.target.value))} /></label>
-      </div>
-      {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
-      <div className="mt-5 flex justify-end gap-2"><button type="button" className="button-secondary" onClick={onClose}>Cancelar</button><button type="button" className="button-primary" onClick={save}><CheckIcon className="h-4 w-4" /> Guardar</button></div>
     </div>
   </div>;
 }
