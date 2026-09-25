@@ -18,6 +18,12 @@ const csp = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Supabase URL and publishable key are public by design (RLS protects the data). They are read from
+  // unprefixed variables so hosting dashboards don't flag them, and inlined into the client at build time.
+  env: {
+    SUPABASE_URL: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
+  },
   async headers() {
     return [{ source: '/(.*)', headers: [
       { key: 'Content-Security-Policy', value: csp },

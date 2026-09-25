@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '';
+  const url = process.env.SUPABASE_URL || '';
+  const key = process.env.SUPABASE_PUBLISHABLE_KEY || '';
   if (!url || !key) return NextResponse.json({ configured: false, connected: false, mode: 'demo-local' });
   try {
     const response = await fetch(`${url}/rest/v1/business_settings?select=*&limit=1`, {

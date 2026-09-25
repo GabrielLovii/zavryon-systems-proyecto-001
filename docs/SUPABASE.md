@@ -44,5 +44,5 @@ La app (`lib/cloud-sync.ts`) guarda local al instante y sube a los ~1,5 s; sin c
 
 Requisitos en el entorno de despliegue (Vercel → Settings → Environment Variables) y en `.env.local`:
 
-- `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Project Settings → API Keys → publishable).
+- `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` (Project Settings → API Keys → publishable). Sin prefijo `NEXT_PUBLIC_`: `next.config.mjs` los incorpora al build (los nombres viejos con prefijo siguen funcionando como respaldo).
 - Supabase → Authentication → URL Configuration: `Site URL` con el dominio de producción y ese dominio en `Redirect URLs` (para los enlaces de confirmación y recuperación de contraseña).

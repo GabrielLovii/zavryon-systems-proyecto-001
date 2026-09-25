@@ -39,8 +39,8 @@ La aplicación continúa usando `localStorage` para el flujo principal. Supabase
 
 Definidas en `.env.example` y configuradas localmente en `.env.local` (este último nunca se documenta ni se versiona):
 
-- `NEXT_PUBLIC_SUPABASE_URL`: URL pública del proyecto Supabase.
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: clave publicable para el cliente.
+- `SUPABASE_URL`: URL pública del proyecto Supabase (antes `NEXT_PUBLIC_SUPABASE_URL`, aún aceptada).
+- `SUPABASE_PUBLISHABLE_KEY`: clave publicable para el cliente (antes `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, aún aceptada).
 
 No copiar valores reales en documentación, commits, issues, logs, artefactos de CI ni capturas. Nunca usar una `service_role` o secret key en el navegador, GitHub o Vercel como variable pública.
 

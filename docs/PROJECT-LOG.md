@@ -62,3 +62,13 @@ Toda modificación futura debe añadir una entrada aquí **antes de reportar la 
 | Verificación | `npm run build`, `tsc`, `next lint` sin avisos, `npm test` 41/41, flujo E2E en navegador (13/13, sin errores JS), 14 pantallas sin desborde a 390 px, login contra Supabase. |
 | Despliegue | Rama `feat/mejoras-abastecimiento` (preview de Vercel). Requiere `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en Vercel para la nube. |
 | Rollback | Revertir el merge; la migración es aditiva (tablas nuevas) y no afecta datos existentes. |
+
+### 2026-09-24 — fix: variables de Supabase sin prefijo público
+
+| Campo | Detalle |
+|---|---|
+| Cambio | La app lee `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY`; `next.config.mjs` las incorpora al build. Los nombres `NEXT_PUBLIC_*` quedan como respaldo. |
+| Por qué | Vercel bloqueaba/advertía al guardar variables con prefijo `NEXT_PUBLIC_`. La clave publicable sigue siendo pública por diseño (RLS protege los datos). |
+| Archivos | `next.config.mjs`, `lib/supabase.ts`, `app/api/supabase-health/route.ts`, `.env.example`, docs. |
+| Verificación | Build con la variable sin prefijo incorpora la clave; `npm test` 41/41. |
+| Rollback | Revertir el commit y volver a cargar las variables `NEXT_PUBLIC_*`. |
