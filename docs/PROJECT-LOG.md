@@ -81,7 +81,8 @@ Toda modificación futura debe añadir una entrada aquí **antes de reportar la 
 | Por qué | Pedido del propietario: usar la app en tablet, pausar y retomar sin perder nada, y guardar en la nube al iniciar sesión. |
 | Archivos | `lib/{ui-state,device,demo-store,cloud-sync}.ts`, `app/{page.tsx,globals.css}`, `components/{dashboard,supply,barcode,sidebar,settings,search-field,order-editor,seasonal-panel,alert-center,new-order}.tsx`, `public/manifest.webmanifest`, `tests/ui-state.test.mjs`. |
 | Verificación | `tsc`, `next lint`, `npm test` 53/53, `next build`. E2E: reanudación 9/9 en 820×1180, 1180×820 y 390×844; comodidad táctil 18/18; flujos previos 13 + 17 + 9; sin desborde horizontal en las 18 secciones en los tres tamaños; sin errores JS. |
-| Rollback | Revertir los commits de esta entrada en `main` (ver `git log`) y recuperar en Vercel el deployment anterior. |
+| Despliegue | Vercel producción desde `main` `a42a52a`: estado success; https://zavryon-systems-proyecto-001.vercel.app responde 200; E2E contra producción en tablet: reanudación 10/10 y comodidad 18/18 sin errores JS. Revisión Gentle AI aprobada (lineage review-51d3c4cc1f90551b); observaciones corregidas en `a42a52a`. |
+| Rollback | Revertir `41dbdc3..a42a52a` en `main` (ver `git log`) y recuperar en Vercel el deployment anterior. |
 
 ### 2026-09-25 — feat: pedidos, recepción, códigos de barras y combos
 
