@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /** True on touch-first devices (tablets, phones): used to avoid popping the on-screen keyboard uninvited. */
 export const isCoarsePointer = () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true;
@@ -78,6 +78,17 @@ export async function requestPersistentStorage(): Promise<boolean | null> {
 export function setAppBadge(count: number) {
   const nav = navigator as Navigator & { setAppBadge?: (count?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
   try { if (count > 0) void nav.setAppBadge?.(count).catch(() => undefined); else void nav.clearAppBadge?.().catch(() => undefined); } catch { /* Unsupported. */ }
+}
+
+/** Closes a dialog with Escape (keyboards on desktop and on tablets with a keyboard cover). */
+export function useEscape(onEscape: () => void, active = true) {
+  const handler = useRef(onEscape); handler.current = onEscape;
+  useEffect(() => {
+    if (!active) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') handler.current(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [active]);
 }
 
 /** Short haptic feedback on devices that support it (Android tablets/phones). */

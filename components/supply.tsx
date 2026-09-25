@@ -11,7 +11,8 @@ import type { Section } from './sidebar';
 import { SeasonTab } from './seasonal-panel';
 import { QuickProductDialog } from './quick-create';
 import { SearchField } from './search-field';
-import { isNullableRecord, isString, isStringArray, oneOf, usePersistentState, writeUiState } from '@/lib/ui-state';
+import { useEscape } from '@/lib/device';
+import { isNullableRecord, isString, isStringArray, oneOf, removeUiState, usePersistentState, writeUiState } from '@/lib/ui-state';
 
 /** Other screens (e.g. Inicio) deep-link to a tab by setting the remembered tab before navigating. */
 export const openSupplyTab = (tab: Tab) => writeUiState(TAB_KEY, tab);
@@ -160,10 +161,15 @@ function StockTab({ state, update, notify, products, onMove, onRestock, userName
   </section>;
 }
 
-function MovementDialog({ product, onClose, onSave }: { product: Product; onClose: () => void; onSave: (type: StockMovementType, quantity: number, reason: string) => void }) {
-  const [type, setType] = useState<StockMovementType>('ajuste');
-  const [quantity, setQuantity] = useState(product.stock);
-  const [reason, setReason] = useState('');
+function MovementDialog({ product, onClose: close, onSave: save }: { product: Product; onClose: () => void; onSave: (type: StockMovementType, quantity: number, reason: string) => void }) {
+  // What was typed survives a reload; once saved or cancelled it is forgotten.
+  const forget = () => ['type', 'quantity', 'reason'].forEach((field) => removeUiState(`movement:${product.id}:${field}`));
+  const onClose = () => { forget(); close(); };
+  const onSave = (type: StockMovementType, quantity: number, reason: string) => { forget(); save(type, quantity, reason); };
+  const [type, setType] = usePersistentState<StockMovementType>(`movement:${product.id}:type`, 'ajuste', isString);
+  const [quantity, setQuantity] = usePersistentState(`movement:${product.id}:quantity`, product.stock, (value) => typeof value === 'number');
+  const [reason, setReason] = usePersistentState(`movement:${product.id}:reason`, '', isString);
+  useEscape(onClose);
   const preview = type === 'entrada' ? product.stock + quantity : type === 'salida' ? Math.max(0, product.stock - quantity) : type === 'faltante' ? 0 : quantity;
   return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <div className="modal-card" role="dialog" aria-modal="true" aria-labelledby="movement-title">

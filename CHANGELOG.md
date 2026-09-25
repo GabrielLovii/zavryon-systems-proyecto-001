@@ -4,6 +4,9 @@ Resumen corto; consultar [`docs/PROJECT-LOG.md`](docs/PROJECT-LOG.md) para el de
 
 ## 2026-09-25
 
+- **fix** — Recargar ya no reemplaza los datos guardados por la demo.
+- **feat** — Tablet, pausar y retomar donde lo dejaste, y 100 mejoras de uso ([`docs/MEJORAS-100.md`](docs/MEJORAS-100.md)).
+
 - **feat/pedidos-recepcion** — Alta rápida de productos y proveedores, recepción por lista, lectora de códigos de barras, catálogo por categoría/proveedor/código, calendario comercial y combos.
 
 ## 2026-09-24

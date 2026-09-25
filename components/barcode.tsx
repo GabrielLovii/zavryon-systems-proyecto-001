@@ -9,7 +9,7 @@ import { downloadCsv, money, toNumber } from '@/lib/format';
 import { UNCATEGORIZED } from '@/lib/stock';
 import { QuickProductDialog } from './quick-create';
 import { SearchField } from './search-field';
-import { isCoarsePointer, useWakeLock, vibrate } from '@/lib/device';
+import { isCoarsePointer, useEscape, useWakeLock, vibrate } from '@/lib/device';
 import { isBoolean, isNumber, isString, usePageHidden, usePersistentState } from '@/lib/ui-state';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
@@ -46,6 +46,7 @@ function CameraScanner({ onDetect, onClose }: { onDetect: (code: string) => void
   const detected = useRef(onDetect); detected.current = onDetect;
   // Never keep the camera on in the background: closing unmounts this and stops every track.
   usePageHidden(onClose);
+  useEscape(onClose);
   useEffect(() => {
     let stream: MediaStream | null = null; let frame = 0; let stopped = false;
     const start = async () => {
@@ -90,7 +91,7 @@ export function ScanInput({ onScan, placeholder = 'Escaneá o escribí el códig
   return <div>
     <label className="block text-xs font-semibold text-slate-300" htmlFor="scan-input">{label}</label>
     <div className="mt-1 flex gap-2">
-      <div className="relative min-w-0 flex-1"><QrCodeIcon aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-cyan-300" /><input id="scan-input" ref={input} className="field w-full pl-10 text-base tracking-wider" inputMode="numeric" autoComplete="off" autoFocus={autoFocus && !touch} value={value} placeholder={placeholder} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); submit(value); } }} /></div>
+      <div className="relative min-w-0 flex-1"><QrCodeIcon aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-cyan-300" /><input id="scan-input" ref={input} className="field w-full pl-10 text-base tracking-wider" inputMode="numeric" enterKeyHint="go" autoComplete="off" autoFocus={autoFocus && !touch} value={value} placeholder={placeholder} onChange={(event) => setValue(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); submit(value); } }} /></div>
       <button type="button" className="button-secondary" onClick={() => submit(value)} disabled={!value.trim()}>OK</button>
       {cameraAvailable && <button type="button" className="button-secondary" onClick={() => setCamera(true)} aria-label="Escanear con la cámara en vivo" title="Cámara en vivo"><CameraIcon className="h-5 w-5" /></button>}
       <button type="button" className="button-secondary" onClick={() => photo.current?.click()} aria-label="Leer código desde una foto" title="Sacar o elegir una foto"><PhotoIcon className="h-5 w-5" /><span className="hidden sm:inline">Foto</span></button>

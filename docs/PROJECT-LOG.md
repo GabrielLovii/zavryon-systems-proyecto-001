@@ -73,6 +73,16 @@ Toda modificación futura debe añadir una entrada aquí **antes de reportar la 
 | Verificación | Build con la variable sin prefijo incorpora la clave; `npm test` 41/41. |
 | Rollback | Revertir el commit y volver a cargar las variables `NEXT_PUBLIC_*`. |
 
+### 2026-09-25 — fix + feat: datos que no se pisan, tablet, pausa/retomar y 100 mejoras
+
+| Campo | Detalle |
+|---|---|
+| Cambio | Corrige la pérdida de datos al recargar (la demo pisaba lo guardado). Cada pantalla vuelve como quedó (filtros, búsquedas, selección, formularios a medio cargar, scroll, última sección). En segundo plano no corre nada (cámara, sondeo de nube) y lo pendiente se sube a la nube al pausar. Tablet: tablas como tarjetas, toques de 44 px, menú deslizable, pantalla encendida al recibir/escanear. Detalle en `docs/MEJORAS-100.md`. |
+| Por qué | Pedido del propietario: usar la app en tablet, pausar y retomar sin perder nada, y guardar en la nube al iniciar sesión. |
+| Archivos | `lib/{ui-state,device,demo-store,cloud-sync}.ts`, `app/{page.tsx,globals.css}`, `components/{dashboard,supply,barcode,sidebar,settings,search-field,order-editor,seasonal-panel,alert-center,new-order}.tsx`, `public/manifest.webmanifest`, `tests/ui-state.test.mjs`. |
+| Verificación | `tsc`, `next lint`, `npm test` 53/53, `next build`. E2E: reanudación 9/9 en 820×1180, 1180×820 y 390×844; comodidad táctil 18/18; flujos previos 13 + 17 + 9; sin desborde horizontal en las 18 secciones en los tres tamaños; sin errores JS. |
+| Rollback | Revertir los commits de esta entrada en `main` (ver `git log`) y recuperar en Vercel el deployment anterior. |
+
 ### 2026-09-25 — feat: pedidos, recepción, códigos de barras y combos
 
 | Campo | Detalle |

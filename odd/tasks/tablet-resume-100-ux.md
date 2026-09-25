@@ -15,9 +15,9 @@ Data already persists in localStorage and the section lives in the URL hash, but
 ## Tasks
 - [x] T1 Commit pending docs (b3ec751)
 - [x] T2 Pause/resume: persistent UI state lib, wiring per screen, scroll restore, stop camera/timers when hidden, flush cloud push on hide
-- [ ] T3 Tablet/touch layout and comfort (CSS + layout)
-- [ ] T4 Visual improvements
-- [ ] T5 Usability improvements across screens (to reach 100, listed in docs/MEJORAS-100.md)
+- [x] T3 Tablet/touch layout and comfort (CSS + layout)
+- [x] T4 Visual improvements
+- [x] T5 Usability improvements across screens (to reach 100, listed in docs/MEJORAS-100.md)
 - [ ] T6 Verify (tests, lint, build, E2E desktop/phone/tablet), docs, merge to main, deploy, verify production
 
 ## Acceptance
@@ -30,3 +30,7 @@ Data already persists in localStorage and the section lives in the URL hash, but
 - T1: commit b3ec751
 - Found + fixed data-loss bug: reload reseeded the demo over saved data (screens persisted before hydration). Commit 41dbdc3.
 - T2: screen state persisted per screen (lib/ui-state.ts), scroll + last section restore, camera closes when hidden, cloud polling stops when hidden and pending upload flushes on hide. Checks: npm test 53/53, lint clean, build OK, E2E resume.mjs 9/9 (820x1180 touch), flow 1/2/3 all pass, no JS errors.
+- T3/T4: commit 81bb6de (tablet/touch, cards, search field, wake lock, badges, update notice).
+- T5: Escape on dialogs, stock adjustment fields persisted, "go" key hint; docs/MEJORAS-100.md lists 100 items (sequence verified).
+- Verification on final build: npm test 53/53; lint clean; build OK; resume.mjs 9/9 at 820x1180, 1180x820, 390x844; ux.mjs 18/18; flow 13, flow2 17 (5/5 runs after replacing its fixed 2.2s wait with a content wait - the intermittent failure was the script timing), flow3 9; no horizontal overflow in 18 sections x 3 viewports; no JS errors.
+- Next: T6 ff-merge to main, push, verify Vercel deploy.

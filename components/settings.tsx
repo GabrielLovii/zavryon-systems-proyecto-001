@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { requestPersistentStorage } from '@/lib/device';
+import { requestPersistentStorage, useEscape } from '@/lib/device';
 import { ArrowDownTrayIcon, ArrowPathIcon, ArrowUpTrayIcon, CloudIcon, TrashIcon } from '@heroicons/react/24/outline';
 import type { AppConfig } from '@/lib/mock-data';
 import type { useDemoState } from '@/lib/demo-store';
@@ -22,6 +22,7 @@ export function Settings({ demo, cloud, notify, installPromptAvailable, installe
   const [dialog, setDialog] = useState<null | 'borrar' | 'restaurar'>(null);
   const [confirmation, setConfirmation] = useState('');
   const [storageProtected, setStorageProtected] = useState<boolean | null>(null);
+  useEscape(() => setDialog(null), Boolean(dialog));
   useEffect(() => { void requestPersistentStorage().then(setStorageProtected); }, []);
   const fileInput = useRef<HTMLInputElement>(null);
   const configChanged = JSON.stringify(config) !== JSON.stringify(demo.state.config);
