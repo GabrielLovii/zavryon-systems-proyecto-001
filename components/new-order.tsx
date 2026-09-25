@@ -7,11 +7,14 @@ import type { DemoState } from '@/lib/demo-store';
 import type { Section } from './sidebar';
 import { getLocalDateISO, getLocalDateTimeInput, isValidLocalDateISO, isValidLocalDateTimeInput } from '@/lib/date';
 import { discardDraft, loadDraft, saveDraft } from '@/lib/draft-store';
+import { nextSequentialId } from '@/lib/format';
+import { stockStatus, stockStatusLabels, suggestedQuantity } from '@/lib/stock';
+import { withStatus } from '@/lib/order-flow';
 
 type DraftLine = { id: string; productId: string; quantity: number; price: number };
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 
-const money = (value: number) => `$ ${value.toLocaleString('es-CO')}`;
+import { money } from '@/lib/format';
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block text-xs font-semibold text-slate-300"><span className="mb-1.5 block">{label}</span>{children}</label>;
@@ -31,9 +34,10 @@ export function NewOrder({ state, update, notify, onNavigate }: { state: DemoSta
   const supplierProducts = state.supplierProducts.filter((item) => item.supplierId === supplierId && item.active && state.products.some((product) => product.id === item.productId && product.active));
   const [lines, setLines] = useState<DraftLine[]>([]);
   const [query, setQuery] = useState('');
+  const [notes, setNotes] = useState('');
   const [draftInfo, setDraftInfo] = useState<{ savedAt: string | null; error?: string; recovered?: boolean }>({ savedAt: null });
-  useEffect(() => { const recovered = loadDraft<{ supplierId: string; responsible: string; requester: string; expectedDate: string; requestedAt: string; lines: DraftLine[]; query: string }>('new-order'); if (recovered) { setSupplierId(recovered.data.supplierId); setResponsible(recovered.data.responsible); setRequester(recovered.data.requester || recovered.data.responsible); setExpectedDate(recovered.data.expectedDate || getLocalDateISO()); setRequestedAt(recovered.data.requestedAt || getLocalDateTimeInput()); setLines(recovered.data.lines); setQuery(recovered.data.query); setDraftInfo({ savedAt: recovered.savedAt, recovered: recovered.recovered }); } }, []);
-  useEffect(() => { const timer = window.setTimeout(() => { const result = saveDraft('new-order', { supplierId, responsible, requester, expectedDate, requestedAt, lines, query }); setDraftInfo({ savedAt: result.savedAt, error: result.error }); }, 350); return () => window.clearTimeout(timer); }, [supplierId, responsible, requester, expectedDate, requestedAt, lines, query]);
+  useEffect(() => { const recovered = loadDraft<{ supplierId: string; responsible: string; requester: string; expectedDate: string; requestedAt: string; lines: DraftLine[]; query: string; notes?: string }>('new-order'); if (recovered) { setNotes(recovered.data.notes || ''); setSupplierId(recovered.data.supplierId); setResponsible(recovered.data.responsible); setRequester(recovered.data.requester || recovered.data.responsible); setExpectedDate(recovered.data.expectedDate || getLocalDateISO()); setRequestedAt(recovered.data.requestedAt || getLocalDateTimeInput()); setLines(recovered.data.lines); setQuery(recovered.data.query); setDraftInfo({ savedAt: recovered.savedAt, recovered: recovered.recovered }); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { const result = saveDraft('new-order', { supplierId, responsible, requester, expectedDate, requestedAt, lines, query, notes }); setDraftInfo({ savedAt: result.savedAt, error: result.error }); }, 350); return () => window.clearTimeout(timer); }, [supplierId, responsible, requester, expectedDate, requestedAt, lines, query, notes]);
   const tell = (value: string) => { setMessage(value); notify(value); };
 
   const productResults = supplierProducts.map((supplierProduct) => {
@@ -70,6 +74,8 @@ export function NewOrder({ state, update, notify, onNavigate }: { state: DemoSta
     });
   };
 
+  const lowStock = productResults.filter(({ product }) => stockStatus(product) !== 'ok');
+  const addSuggested = (productId: string, price: number, quantity: number) => setLines((current) => current.some((line) => line.productId === productId) ? current : [...current, { id: `ol-${Date.now()}-${productId}`, productId, quantity, price }]);
   const updateLine = (id: string, patch: Partial<DraftLine>) => setLines((current) => current.map((line) => line.id === id ? { ...line, ...patch } : line));
   const total = lines.reduce((sum, line) => sum + Math.max(0, line.quantity) * Math.max(0, line.price), 0);
   const save = () => {
@@ -78,10 +84,11 @@ export function NewOrder({ state, update, notify, onNavigate }: { state: DemoSta
     if (!isValidLocalDateTimeInput(requestedAt)) return tell('Ingresa una fecha y hora de solicitud válidas');
     setExpectedDateError('');
     const today = getLocalDateISO();
-    const order: Order = { id: `PED-${1048 + state.orders.length + 1}`, supplierId, lines: lines.map(({ id, productId, quantity, price }) => ({ id, productId, quantity, price })), expectedDate, notes: '', responsible, requester, requestedAt, status: 'Preparado', createdAt: today };
-    update((current) => ({ ...current, orders: [...current.orders, order] }));
+    const order: Order = withStatus({ id: nextSequentialId('PED', state.orders.map((item) => item.id), 1049, 4), supplierId, lines: lines.map(({ id, productId, quantity, price }) => ({ id, productId, quantity, price })), expectedDate, notes: notes.trim(), responsible, requester, requestedAt, status: 'Preparado', createdAt: today }, 'Preparado', requester, 'Pedido creado');
+    const ordered = new Set(order.lines.map((line) => line.productId));
+    update((current) => ({ ...current, orders: [...current.orders, order], restockList: current.restockList.filter((item) => !(item.supplierId === supplierId && ordered.has(item.productId))) }));
     discardDraft('new-order'); setDraftInfo({ savedAt: null });
-    tell('Pedido creado');
+    tell(`Pedido ${order.id} creado. Envialo por WhatsApp o PDF desde Pedidos.`);
     onNavigate('Pedidos');
   };
 
@@ -94,6 +101,11 @@ export function NewOrder({ state, update, notify, onNavigate }: { state: DemoSta
        <Field label="Entrega prevista"><input id="expected-date" className="field w-full" type="date" value={expectedDate} onChange={(event) => { setExpectedDate(event.target.value); setExpectedDateError(''); }} aria-invalid={Boolean(expectedDateError)} aria-describedby={expectedDateError ? 'expected-date-error' : undefined} required />{expectedDateError && <span id="expected-date-error" role="alert" className="mt-1 block text-xs text-red-300">{expectedDateError}</span>}</Field>
        <Field label="Solicitado el"><input className="field w-full" type="datetime-local" value={requestedAt} onChange={(event) => setRequestedAt(event.target.value)} /></Field>
     </div>
+     <label className="mt-4 block text-xs font-semibold text-slate-300">Notas para el proveedor<textarea className="field mt-1.5 min-h-16 w-full" value={notes} placeholder="Ej.: Entregar por la mañana, pedir factura A…" onChange={(event) => setNotes(event.target.value)} /></label>
+     {lowStock.length > 0 && <div className="mt-6 rounded-xl border border-amber-300/30 bg-amber-400/5 p-4">
+       <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="text-sm font-bold text-white">Sugeridos para este proveedor · stock bajo</h4><button type="button" className="button-secondary" onClick={() => lowStock.forEach(({ product, supplierProduct }) => addSuggested(product.id, supplierProduct.price, suggestedQuantity(product, supplierProduct.minimum)))}>Agregar todos</button></div>
+       <ul className="mt-3 flex flex-wrap gap-2">{lowStock.map(({ product, supplierProduct }) => { const inOrder = lines.some((line) => line.productId === product.id); return <li key={product.id}><button type="button" disabled={inOrder} onClick={() => addSuggested(product.id, supplierProduct.price, suggestedQuantity(product, supplierProduct.minimum))} className={`chip text-left ${inOrder ? 'opacity-50' : 'hover:border-amber-300/60'}`}><span className="block text-white">{product.name}</span><span className="block text-[11px] font-normal text-slate-400">{stockStatusLabels[stockStatus(product)]} · quedan {product.stock} · sugerido {suggestedQuantity(product, supplierProduct.minimum)}{inOrder ? ' · en el pedido' : ''}</span></button></li>; })}</ul>
+     </div>}
      <div className="mt-6 rounded-xl border border-cyan-300/20 bg-ink/40 p-4">
        <label htmlFor="product-search" className="mb-2 block text-sm font-bold text-white">Buscar productos</label>
        <div className="relative">
@@ -113,8 +125,8 @@ export function NewOrder({ state, update, notify, onNavigate }: { state: DemoSta
      <div className="mt-6 space-y-3">
        {lines.map((line, index) => { const product = state.products.find((item) => item.id === line.productId); return <div key={line.id} className="grid gap-3 rounded-xl border border-white/10 p-4 md:grid-cols-[minmax(0,2fr)_120px_160px_120px_auto] md:items-end">
          <Field label={`Producto ${index + 1}`}><select className="field w-full" value={line.productId} onChange={(event) => changeLineProduct(line.id, event.target.value)}>{productResults.map(({ product: option }) => <option key={option.id} value={option.id}>{option.name}</option>)}</select></Field>
-         <Field label="Cantidad"><input className="field w-full" type="number" min="1" value={line.quantity} onChange={(event) => updateLine(line.id, { quantity: Number(event.target.value) })} /></Field>
-         <Field label="Precio unitario"><input className="field w-full" type="number" min="0" step="0.01" value={line.price} onChange={(event) => updateLine(line.id, { price: Number(event.target.value) })} /></Field>
+         <Field label="Cantidad"><input className="field w-full" type="number" min="1" value={line.quantity} onChange={(event) => updateLine(line.id, { quantity: Math.max(1, Number(event.target.value) || 1) })} /></Field>
+         <Field label="Precio unitario"><input className="field w-full" type="number" min="0" step="0.01" value={line.price} onChange={(event) => updateLine(line.id, { price: Math.max(0, Number(event.target.value) || 0) })} /></Field>
          <div className="text-sm text-slate-300"><span className="block text-xs font-semibold text-slate-500">Subtotal</span>{money(Math.max(0, line.quantity) * Math.max(0, line.price))}<span className="mt-1 block text-xs text-slate-500">{product?.unit || 'Unidad'}</span></div>
          <button type="button" className="button-secondary" onClick={() => setLines((current) => current.filter((item) => item.id !== line.id))}><TrashIcon className="h-4 w-4" /> Quitar</button>
        </div>; })}

@@ -9,7 +9,7 @@
     "prebuild": "npm run copy:pdf-worker",
     "build": "next build",
     "lint": "next lint",
-    "test": "node --test tests/*.test.mjs",
+    "test": "node --import ./tests/ts-resolve.mjs --test tests/*.test.mjs",
     "start": "next start"
   },
   "dependencies": {
@@ -27,6 +27,7 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.15",
+    "linkedom": "^0.18.13",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2"

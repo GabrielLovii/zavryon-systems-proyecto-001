@@ -14,8 +14,8 @@ type PdfState = {
 };
 
 const receptionLabels: Record<ReceptionStatus, string> = { pending: 'Pendiente', received: 'Llegó', shortage: 'Faltante', surplus: 'Sobrante', substitution: 'Sustitución' };
-const money = (value: number) => `$ ${value.toLocaleString('es-CO')}`;
-const dateEs = (value?: string) => value ? new Intl.DateTimeFormat('es-ES', { dateStyle: 'medium' }).format(new Date(`${value.slice(0, 10)}T00:00:00`)) : 'Pendiente';
+import { money } from '@/lib/format';
+const dateEs = (value?: string) => value ? new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium' }).format(new Date(`${value.slice(0, 10)}T00:00:00`)) : 'Pendiente';
 const display = (value?: string | number) => value === undefined || value === null || value === '' ? 'Pendiente' : String(value);
 
 export function OrderPdf({ state, orderId, onClose }: { state: PdfState; orderId: string | null; onClose: () => void }) {

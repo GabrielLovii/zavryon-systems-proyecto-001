@@ -51,3 +51,14 @@ Toda modificación futura debe añadir una entrada aquí **antes de reportar la 
 | Verificación | `npm ci`, `npm run build`, `npx tsc --noEmit`, `npm test` (10/10) y headers verificados con `next start`. |
 | Despliegue | Vercel desde `main`. |
 | Rollback | Revertir este commit según `docs/ROLLBACK.md`. |
+
+### 2026-09-24 — feat: abastecimiento, flujo de pedidos, nube y 60 mejoras
+
+| Campo | Detalle |
+|---|---|
+| Cambio | Módulo Abastecimiento (stock por categoría, movimientos, faltantes, por pedir, temporada), flujo de pedidos con WhatsApp, caja en pagos, guardado en la nube (Supabase), extractor de fuentes v2, rediseño responsive, logo e íconos PWA. Lista completa en `docs/MEJORAS-60.md`. |
+| Por qué | Pedidos del cliente y errores detectados en la revisión (ver MEJORAS-60). |
+| Archivos | `components/*`, `lib/{stock,order-flow,seasonal,cloud-sync,catalog-parse,source-extraction,pdf-extractor,format}.ts`, `app/*`, `public/*`, `tests/*`, migración Supabase `app_state_cloud_sync`. |
+| Verificación | `npm run build`, `tsc`, `next lint` sin avisos, `npm test` 41/41, flujo E2E en navegador (13/13, sin errores JS), 14 pantallas sin desborde a 390 px, login contra Supabase. |
+| Despliegue | Rama `feat/mejoras-abastecimiento` (preview de Vercel). Requiere `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en Vercel para la nube. |
+| Rollback | Revertir el merge; la migración es aditiva (tablas nuevas) y no afecta datos existentes. |

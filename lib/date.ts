@@ -23,7 +23,7 @@ export const isValidLocalDateTimeInput = (value: unknown): value is string => {
 };
 
 export const formatDateEs = (value: string, options: Intl.DateTimeFormatOptions = { dateStyle: 'medium' }) =>
-  new Intl.DateTimeFormat('es-ES', options).format(new Date(`${value.slice(0, 10)}T00:00:00`));
+  new Intl.DateTimeFormat('es-AR', options).format(new Date(`${value.slice(0, 10)}T00:00:00`));
 
 export const greetingForHour = (hour: number) => hour >= 5 && hour < 12 ? 'Buenos días' : hour >= 12 && hour < 20 ? 'Buenas tardes' : 'Buenas noches';
 

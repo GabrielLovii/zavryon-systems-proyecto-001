@@ -41,9 +41,12 @@ export function assertSafeUrl(value: unknown): URL {
 }
 export function assertMagic(bytes: Uint8Array, contentType: string) {
   const type = contentType.toLowerCase();
-  const starts = (value: string) => new TextDecoder().decode(bytes.slice(0, value.length)) === value;
-  if (type.includes('pdf') && !(bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)) throw new Error('El recurso no tiene la firma PDF esperada');
-  if ((type.includes('html') || type.includes('json') || type.startsWith('text/')) && !starts('<') && !starts('{') && !starts('[') && !starts('\ufeff<')) throw new Error('El recurso no tiene una firma de texto/HTML/JSON válida');
+  if (type.includes('pdf')) { if (!(bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46)) throw new Error('El recurso no tiene la firma PDF esperada'); return; }
+  // Text formats: skip BOM/whitespace before checking the first meaningful character; binary content (NUL bytes) is rejected.
+  const head = new TextDecoder().decode(bytes.slice(0, 2048)).replace(/^\ufeff/, '').trimStart();
+  if (bytes.slice(0, 2048).includes(0)) throw new Error('El recurso parece binario y no es texto, HTML ni JSON');
+  if (type.includes('html') && !head.startsWith('<')) throw new Error('El recurso no tiene una firma HTML válida');
+  if (type.includes('json') && !head.startsWith('{') && !head.startsWith('[')) throw new Error('El recurso no tiene una firma JSON válida');
 }
 export const canonicalKey = (candidate: Pick<SourceCandidate, 'name' | 'sku' | 'brand'>) => (candidate.sku.trim() ? `sku:${candidate.sku.trim().toLowerCase()}` : `name:${[candidate.brand, candidate.name].filter(Boolean).join(' ').trim().toLowerCase().replace(/\s+/g, ' ')}`);
 export function dedupeCandidates(candidates: SourceCandidate[]) { const seen = new Map<string, SourceCandidate>(); return candidates.map((candidate) => { const key = canonicalKey(candidate); const previous = seen.get(key); if (previous) { candidate.reviewState = 'needs_review'; candidate.notes = `${candidate.notes} Conflicto con ${previous.name}; revisar antes de importar.`; } else seen.set(key, candidate); return candidate; }); }
