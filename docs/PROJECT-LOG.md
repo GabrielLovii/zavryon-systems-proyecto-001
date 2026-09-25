@@ -72,3 +72,12 @@ Toda modificación futura debe añadir una entrada aquí **antes de reportar la 
 | Archivos | `next.config.mjs`, `lib/supabase.ts`, `app/api/supabase-health/route.ts`, `.env.example`, docs. |
 | Verificación | Build con la variable sin prefijo incorpora la clave; `npm test` 41/41. |
 | Rollback | Revertir el commit y volver a cargar las variables `NEXT_PUBLIC_*`. |
+
+### 2026-09-25 — feat: pedidos, recepción, códigos de barras y combos
+
+| Campo | Detalle |
+|---|---|
+| Cambio | Mejoras 61–73 de `docs/MEJORAS-60.md`: alta rápida de productos/proveedores, recepción por lista, lectora de códigos (HID, cámara, foto), catálogo por vistas, historial por categoría, calendario y combos. |
+| Archivos | `components/{quick-create,barcode,order-editor,seasonal-panel,supply,dashboard,new-order,order-pdf}.tsx`, `lib/{barcode,seasonal,catalog-parse,source-extraction,stock}.ts`, `app/globals.css`, `next.config.mjs` (cámara permitida), tests. |
+| Verificación | `tsc`, `next lint`, `npm test` 48/48, flujos E2E en navegador (13 + 17 + 9 controles) sin errores JS, 390 px sin desborde. La lectura por foto/cámara requiere navegador con BarcodeDetector (Chrome/Edge Android). |
+| Rollback | Revertir el merge de `feat/pedidos-recepcion`. |

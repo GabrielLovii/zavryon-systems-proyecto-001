@@ -2,6 +2,10 @@
 
 Resumen corto; consultar [`docs/PROJECT-LOG.md`](docs/PROJECT-LOG.md) para el detalle operativo y las referencias de rollback.
 
+## 2026-09-25
+
+- **feat/pedidos-recepcion** — Alta rápida de productos y proveedores, recepción por lista, lectora de códigos de barras, catálogo por categoría/proveedor/código, calendario comercial y combos.
+
 ## 2026-09-24
 
 - **feat/mejoras-abastecimiento** — Abastecimiento, flujo de pedidos con WhatsApp, cajas en pagos, nube Supabase, fuentes v2 y 60 mejoras ([`docs/MEJORAS-60.md`](docs/MEJORAS-60.md)).

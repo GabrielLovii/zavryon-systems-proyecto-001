@@ -71,3 +71,21 @@ Continúa [`MEJORAS-50.md`](MEJORAS-50.md). Rama `feat/mejoras-abastecimiento`.
 | 58 | Aviso de trabajo sin conexión. |
 | 59 | Título de pestaña por sección. |
 | 60 | 41 tests automáticos (PDF real, extractor, stock, pedidos, nube) y CI en Node 22. |
+
+## Segunda tanda (2026-09-25)
+
+| # | Mejora |
+|---:|---|
+| 61 | Crear producto (con precio y código interno) y proveedor desde Nuevo pedido, Editar pedido, Abastecimiento y Fuentes. |
+| 62 | Editar pedido muestra solo los productos del proveedor; cada edición queda en el historial. |
+| 63 | Recepción: lista de hoy / semana / pendientes / recibidas; se toca una para ver estado, recibir, corregir o exportar PDF. |
+| 64 | Códigos de barras: lectoras USB, USB‑C y Bluetooth (modo teclado), cámara y foto; validación EAN/UPC. |
+| 65 | Escaneo en recepción (+1 por lectura) y asignación de códigos desconocidos. |
+| 66 | Lista de precios CSV con código de barras, costo, margen y precio de venta. |
+| 67 | PDF del pedido con código interno, EAN y código del proveedor. |
+| 68 | Catálogo agrupado por categoría, proveedor o código; búsqueda por código de proveedor. |
+| 69 | Historial agrupado por categoría (o todo junto). |
+| 70 | Calendario comercial de 90 días (feriados, fechas comerciales, Misiones, cobros). |
+| 71 | Combos armados con productos reales: costo, precio normal, precio combo y cartel para copiar. |
+| 72 | Logo nuevo en PDFs e íconos; estilos en capas de Tailwind (arregla íconos encimados en buscadores). |
+| 73 | Extractor de fuentes: ignora tablas que no son de productos, números de documento y etiquetas sueltas. |
