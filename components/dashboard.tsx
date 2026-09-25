@@ -87,9 +87,11 @@ export function Dashboard({ section, onNavigate, onOpenMenu, demo, cloud, instal
   useEffect(() => {
     if (!demo.hydrated || resumeChecked.current) return;
     resumeChecked.current = true;
-    const pending = ['orders:editing', 'catalog:editing', 'suppliers:editing', 'users:editing', 'payments:editing', 'supply:moving', 'reception:selected'].some((key) => readUiState<unknown>(key, null) !== null);
-    if (pending) setToast('Seguís donde lo dejaste: recuperamos lo que estabas haciendo');
-  }, [demo.hydrated]);
+    // Only when the screen being reopened actually brings back something half-done.
+    const resumable: Partial<Record<Section, string>> = { Pedidos: 'orders:editing', Catalogo: 'catalog:editing', Proveedores: 'suppliers:editing', Usuarios: 'users:editing', Pagos: 'payments:editing', Abastecimiento: 'supply:moving', Recepcion: 'reception:selected' };
+    const key = resumable[section];
+    if (key && readUiState<unknown>(key, null) !== null) setToast('Seguís donde lo dejaste: recuperamos lo que estabas haciendo');
+  }, [demo.hydrated, section]);
   useEffect(() => { try { setCloudTipHidden(window.sessionStorage.getItem('zavryon-cloud-tip') === '1'); } catch { /* Show the tip. */ } }, []);
   const hideCloudTip = () => { setCloudTipHidden(true); try { window.sessionStorage.setItem('zavryon-cloud-tip', '1'); } catch { /* Hidden for this view only. */ } };
   useEffect(() => { if (!demo.state.alertPreferences.browser || !('Notification' in window) || Notification.permission !== 'granted') return; const pending = activeAlerts.find((alert) => !demo.state.alertPreferences.notifiedKeys.includes(alert.key)); if (!pending) return; new Notification('ZAVRYON SYSTEMS', { body: pending.title, icon: '/icon-192.png' }); demo.update((current) => ({ ...current, alertPreferences: { ...current.alertPreferences, notifiedKeys: [...current.alertPreferences.notifiedKeys, pending.key].slice(-500) } })); }, [activeAlerts, demo]);
@@ -148,6 +150,8 @@ function Home({ state, alerts, onNavigate }: { state: State; alerts: AppAlert[];
 function OrderTable({ state }: { state: State }) { const recent = [...state.orders].reverse().slice(0, 6); return recent.length ? <><ul className="space-y-2 md:hidden">{recent.map((o) => { const stage = orderStage(o.status); return <li key={o.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 p-3"><div className="min-w-0"><div className="truncate font-semibold text-white">{o.id} · {supplierName(state.suppliers, o.supplierId)}</div><div className="text-xs text-slate-400">{money(orderTotal(o))}</div></div><span className={stageBadge[stage]}>{stageLabels[stage]}</span></li>; })}</ul><div className="hidden overflow-x-auto md:block"><table className="data-table"><thead><tr><th>Pedido</th><th>Proveedor</th><th>Total</th><th>Estado</th><th>Pago</th></tr></thead><tbody>{recent.map((o) => { const stage = orderStage(o.status); return <tr key={o.id}><td className="font-bold text-white">{o.id}</td><td>{supplierName(state.suppliers, o.supplierId)}</td><td className="whitespace-nowrap">{money(orderTotal(o))}</td><td><span className={stageBadge[stage]}>{stageLabels[stage]}</span></td><td><Badge value={paymentLabel(state, o.id)} /></td></tr>; })}</tbody></table></div></> : <EmptyState text="Todavía no hay pedidos." />; }
 function Orders({ state, update, notify, onNavigate, userName }: { state: State; update: Mutate; notify: (m: string) => void; onNavigate: (s: Section) => void; userName: string }) {
   const [printOrderId, setPrintOrderId] = useState<string | null>(null); const [detailOrderId, setDetailOrderId] = usePersistentState<string | null>('orders:detail', null, isNullableString); const [editing, setEditing] = usePersistentState<Order | null>('orders:editing', null, isNullableRecord);
+  // The editor works on the current order in state; the saved copy only remembers which one was open.
+  const editingOrder = editing ? state.orders.find((o) => o.id === editing.id) : undefined;
   const [filter, setFilter] = usePersistentState<'todos' | OrderStage>('orders:filter', 'todos', (value) => value === 'todos' || (typeof value === 'string' && value in stageLabels)); const [query, setQuery] = usePersistentState('orders:query', '', isString);
   const counts = state.orders.reduce((acc, order) => { const stage = orderStage(order.status); acc[stage] = (acc[stage] || 0) + 1; return acc; }, {} as Partial<Record<OrderStage, number>>);
   const filters: ('todos' | OrderStage)[] = ['todos', 'preparado', 'enviado', 'en-curso', 'en-recepcion', 'recibido', 'cancelado'];
@@ -184,7 +188,7 @@ function Orders({ state, update, notify, onNavigate, userName }: { state: State;
     </Panel>
     <OrderDetail state={state} orderId={detailOrderId} onClose={() => setDetailOrderId(null)} />
     <OrderPdf state={state} orderId={printOrderId} onClose={() => setPrintOrderId(null)} />
-    {editing && <OrderEditor order={editing} state={state} update={update} notify={notify} userName={userName} onClose={() => { removeUiState(`order-editor:${editing.id}`); setEditing(null); }} />}
+    {editing && editingOrder && <OrderEditor order={editingOrder} state={state} update={update} notify={notify} userName={userName} onClose={() => { removeUiState(`order-editor:${editing.id}`); setEditing(null); }} />}
   </>;
 }
 

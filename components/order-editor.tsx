@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type SetStateAction } from 'react';
 import { ExclamationTriangleIcon, MagnifyingGlassIcon, PlusIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import type { DemoState } from '@/lib/demo-store';
 import type { Order, OrderLine } from '@/lib/mock-data';
@@ -8,11 +8,20 @@ import { money, toNumber } from '@/lib/format';
 import { orderStage, stageLabels } from '@/lib/order-flow';
 import { QuickProductDialog } from './quick-create';
 import { isNullableRecord, usePersistentState } from '@/lib/ui-state';
+import { stateHash } from '@/lib/cloud-sync';
 
 type Mutate = (fn: (state: DemoState) => DemoState) => void;
 
 export function OrderEditor({ order, state, update, onClose, notify = () => undefined, userName = '' }: { order: Order; state: DemoState; update: Mutate; onClose: () => void; notify?: (message: string) => void; userName?: string }) {
-  const [draft, setDraft] = usePersistentState<Order>(`order-editor:${order.id}`, order, (value) => isNullableRecord(value) && value !== null && (value as Order).id === order.id);
+  // The unsaved draft survives a reload, but only while the order it started from is unchanged: if the order
+  // was updated since (cloud pull, status change, another device) the editor starts again from the new data.
+  const base = useMemo(() => stateHash(order), [order]);
+  const [saved, setSaved] = usePersistentState<{ base: string; draft: Order }>(`order-editor:${order.id}`, () => ({ base, draft: order }), (value) => {
+    const entry = value as { base?: unknown; draft?: unknown } | null;
+    return Boolean(entry) && entry?.base === base && isNullableRecord(entry?.draft) && (entry?.draft as Order | null)?.id === order.id;
+  });
+  const draft = saved.draft;
+  const setDraft = useCallback((next: SetStateAction<Order>) => setSaved((current) => ({ base: current.base, draft: typeof next === 'function' ? next(current.draft) : next })), [setSaved]);
   const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState('');

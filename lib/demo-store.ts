@@ -31,27 +31,45 @@ export function normalizeDemoState(value: unknown): DemoState | null {
   return { ...initialDemoState(), ...saved, version: 7 as const, orders: (saved.orders || []).map((order) => normalizeOrder(order)), suppliers: (saved.suppliers || suppliers).map((supplier) => ({ ...supplier, terms: normalizePaymentPreference(supplier.terms) })), sources: (saved.sources || []).map((source) => ({ ...source, candidates: (source.candidates || []).map((candidate) => normalizeSourceCandidate(candidate)) })), alerts: saved.alerts || [], alertPreferences: { ...initialDemoState().alertPreferences, ...saved.alertPreferences }, stockMovements: Array.isArray(saved.stockMovements) ? saved.stockMovements.slice(-2000) : [], restockList: Array.isArray(saved.restockList) ? saved.restockList : [] };
 }
 
+/**
+ * Writes the state to storage, keeping the previous copy as backup. Screens run effects (e.g. alert
+ * generation) before the store reads storage; writing before that read would overwrite the user's saved
+ * data with the demo seed, so every write is skipped until markHydrated() is called.
+ */
+export function createDemoPersistence(getStorage: () => Pick<Storage, 'getItem' | 'setItem'>, now = () => new Date()) {
+  let hydrated = false;
+  return {
+    markHydrated() { hydrated = true; },
+    /** Returns the save timestamp, 'skipped' before hydration, or 'error' if storage failed. */
+    persist(next: DemoState): string | 'skipped' | 'error' {
+      if (!hydrated) return 'skipped';
+      try {
+        const storage = getStorage();
+        const serialized = JSON.stringify(next);
+        const previous = storage.getItem(DEMO_STORAGE_KEY);
+        if (previous) storage.setItem(DEMO_BACKUP_KEY, previous);
+        storage.setItem(DEMO_STORAGE_KEY, serialized);
+        const savedAt = now().toISOString();
+        storage.setItem(DEMO_SAVED_AT_KEY, savedAt);
+        return savedAt;
+      } catch { return 'error'; }
+    },
+  };
+}
+
 export function useDemoState() {
   const [state, setState] = useState<DemoState>(initialDemoState);
   const [hydrated, setHydrated] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceStatus, setPersistenceStatus] = useState<'pendiente' | 'guardado' | 'recuperado' | 'error'>('pendiente');
   const stateRef = useRef(state); stateRef.current = state;
-  // Screens run effects (e.g. alert generation) before this hook reads storage. Writing before that read
-  // would overwrite the user's saved data with the demo seed, so nothing is persisted until hydration ends.
-  const hydratedRef = useRef(false);
+  const store = useRef<ReturnType<typeof createDemoPersistence> | null>(null);
   const persist = (next: DemoState) => {
-    if (!hydratedRef.current) return;
-    try {
-      const serialized = JSON.stringify(next);
-      const previous = window.localStorage.getItem(DEMO_STORAGE_KEY);
-      if (previous) window.localStorage.setItem(DEMO_BACKUP_KEY, previous);
-      window.localStorage.setItem(DEMO_STORAGE_KEY, serialized);
-      const savedAt = new Date().toISOString();
-      window.localStorage.setItem(DEMO_SAVED_AT_KEY, savedAt);
-      setLastSavedAt(savedAt);
-      setPersistenceStatus('guardado');
-    } catch { setPersistenceStatus('error'); }
+    store.current ??= createDemoPersistence(() => window.localStorage);
+    const result = store.current.persist(next);
+    if (result === 'skipped') return;
+    if (result === 'error') { setPersistenceStatus('error'); return; }
+    setLastSavedAt(result); setPersistenceStatus('guardado');
   };
   useEffect(() => {
     const read = (key: string) => {
@@ -64,7 +82,7 @@ export function useDemoState() {
        if (loaded) { setState(loaded); const savedAt = window.localStorage.getItem(DEMO_SAVED_AT_KEY); setLastSavedAt(savedAt); setPersistenceStatus(read(DEMO_STORAGE_KEY) ? 'guardado' : 'recuperado'); }
     } catch {
       try { const recovered = read(DEMO_BACKUP_KEY); if (recovered) { setState(recovered); setPersistenceStatus('recuperado'); } else setPersistenceStatus('error'); } catch { setPersistenceStatus('error'); }
-     } finally { hydratedRef.current = true; setHydrated(true); }
+     } finally { store.current ??= createDemoPersistence(() => window.localStorage); store.current.markHydrated(); setHydrated(true); }
   }, []);
   useEffect(() => { if (!hydrated) return; const timer = window.setTimeout(() => persist(state), 250); const flush = () => persist(stateRef.current); window.addEventListener('visibilitychange', flush); window.addEventListener('pagehide', flush); return () => { window.clearTimeout(timer); window.removeEventListener('visibilitychange', flush); window.removeEventListener('pagehide', flush); }; }, [hydrated, state]);
   const update = useCallback((change: (current: DemoState) => DemoState) => setState((current) => { const next = change(current); const persisted = { ...next, sources: next.sources.map((source) => ({ ...source, candidates: source.candidates.map((candidate) => normalizeSourceCandidate(candidate)) })) }; const unsafeApproved = persisted.sources.some((source) => source.candidates.some((candidate) => candidate.status === 'Aprobado' && !canImportCandidate(candidate))); if (unsafeApproved) { setPersistenceStatus('error'); return current; } persist(persisted); return persisted; }), []);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 
 /**
  * Screen state (tabs, filters, searches, selections, half-edited forms, scroll) kept on this device so a
@@ -54,17 +54,19 @@ export function clearUiState() {
  * client after navigation (section screens), so the lazy read never runs during server rendering.
  */
 export function usePersistentState<T>(key: string, initial: T | (() => T), isValid?: (value: unknown) => boolean): [T, Dispatch<SetStateAction<T>>] {
-  const [value, setValue] = useState<T>(() => readUiState(key, typeof initial === 'function' ? (initial as () => T)() : initial, isValid));
-  const latest = useRef(value); latest.current = value;
-  const keyRef = useRef(key);
-  // A key change (e.g. another order) loads that key's saved value.
-  useEffect(() => {
-    if (keyRef.current === key) return;
-    keyRef.current = key;
-    setValue(readUiState(key, typeof initial === 'function' ? (initial as () => T)() : initial, isValid));
+  const load = (forKey: string) => readUiState(forKey, typeof initial === 'function' ? (initial as () => T)() : initial, isValid);
+  // The value is stored together with its key, so a key change (e.g. another order) reads that key's value
+  // in the same render and never writes the previous value under the new key.
+  const [entry, setEntry] = useState(() => ({ key, value: load(key) }));
+  const value = entry.key === key ? entry.value : load(key);
+  const keyRef = useRef(key); keyRef.current = key;
+  const setValue = useCallback<Dispatch<SetStateAction<T>>>((next) => setEntry((current) => {
+    const forKey = keyRef.current;
+    const base = current.key === forKey ? current.value : load(forKey);
+    return { key: forKey, value: typeof next === 'function' ? (next as (previous: T) => T)(base) : next };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-  useEffect(() => { if (keyRef.current === key) writeUiState(key, value); }, [key, value]);
+  }), []);
+  useEffect(() => { if (entry.key === key) writeUiState(key, entry.value); }, [key, entry]);
   return [value, setValue];
 }
 

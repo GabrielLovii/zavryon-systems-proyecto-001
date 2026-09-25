@@ -148,25 +148,30 @@ export function useCloudSync(demo: Demo) {
     return () => window.clearTimeout(timer);
   }, [demo.state, userId, conflict, push]);
 
+  const pullRef = useRef(pull); pullRef.current = pull;
+  const pushRef = useRef(push); pushRef.current = push;
   // Catch up when coming back online or returning to the app (changes made on another device).
   useEffect(() => {
     if (!userId) return;
     // While hidden (tablet asleep, other app in front) nothing runs: no polling timer. Before going to the
     // background, unsynced edits are uploaded right away instead of waiting for the debounce.
+    // pull/push are read through refs: their identity changes with the local state, and re-subscribing on
+    // every edit would restart the 60 s timer so a periodic pull might never run during continuous use.
     let interval = 0;
-    const startPolling = () => { window.clearInterval(interval); interval = window.setInterval(() => { void pull(); }, 60_000); };
-    const onOnline = () => { void pull(); };
+    const startPolling = () => { window.clearInterval(interval); interval = window.setInterval(() => { void pullRef.current(); }, 60_000); };
+    const onOnline = () => { void pullRef.current(); };
     const onVisibility = () => {
-      if (document.visibilityState === 'visible') { void pull(); startPolling(); return; }
+      if (document.visibilityState === 'visible') { void pullRef.current(); startPolling(); return; }
       window.clearInterval(interval);
       const meta = readMeta();
-      if (ready.current && !conflictRef.current && !(meta?.userId === userId && meta.hash === stateHash(comparable(stateRef.current)))) void push();
+      // push() itself returns early while another upload is in flight (busy ref).
+      if (ready.current && !conflictRef.current && !(meta?.userId === userId && meta.hash === stateHash(comparable(stateRef.current)))) void pushRef.current();
     };
     window.addEventListener('online', onOnline);
     document.addEventListener('visibilitychange', onVisibility);
     if (document.visibilityState === 'visible') startPolling();
     return () => { window.removeEventListener('online', onOnline); document.removeEventListener('visibilitychange', onVisibility); window.clearInterval(interval); };
-  }, [userId, pull, push]);
+  }, [userId]);
 
   const resolveConflict = useCallback(async (keep: 'nube' | 'local') => {
     if (!conflict || !userId) return;
