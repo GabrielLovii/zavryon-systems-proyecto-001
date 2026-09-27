@@ -27,7 +27,7 @@ function makeCandidate(id: string, product: ParsedProduct, ev: Evidence, signal:
   return normalizeSourceCandidate({ id, name: product.name, sku: product.sku, brand: product.brand, unit: product.unit, category: product.category, price: product.price?.value || 0, currency: product.price?.currency || 'ARS', availability, expiry: '', imageUrl, fields: fields as SourceCandidateFields, confidence, reviewState: 'pending', extractorVersion: EXTRACTOR_VERSION, status: 'Pendiente', notes: `Detectado en ${provenance.toLowerCase()}${warnings ? ` (${warnings})` : ''}; revisar antes de confirmar.` });
 }
 
-const finish = (candidates: SourceCandidate[], emptyWarning: string, extra: string[] = []): ExtractionResult => {
+export const finish = (candidates: SourceCandidate[], emptyWarning: string, extra: string[] = []): ExtractionResult => {
   const unique = dedupeCandidates(candidates).slice(0, SOURCE_LIMITS.maxCandidates);
   const withoutPrice = unique.filter((candidate) => !candidate.price).length;
   const warnings = [...extra, ...(unique.length ? [] : [emptyWarning]), ...(withoutPrice ? [`${withoutPrice} candidato(s) sin precio: completalo antes de aprobar.`] : []), ...(candidates.length > SOURCE_LIMITS.maxCandidates ? [`Se muestran los primeros ${SOURCE_LIMITS.maxCandidates} de ${candidates.length} productos.`] : [])];
@@ -37,7 +37,7 @@ const finish = (candidates: SourceCandidate[], emptyWarning: string, extra: stri
 // ---------- Text (PDF text layer, plain text) ----------
 
 /** Parses text line by line. Lines laid out as columns (tabs / wide gaps) use a detected header row when present. */
-function textCandidates(text: string, sourceId: string, label: string): SourceCandidate[] {
+export function textCandidates(text: string, sourceId: string, label: string): SourceCandidate[] {
   const candidates: SourceCandidate[] = [];
   let roles: (ColumnRole | null)[] | null = null;
   text.slice(0, SOURCE_LIMITS.maxText).split(/\r?\n/).forEach((rawLine, index) => {
@@ -108,6 +108,22 @@ function visibleText(doc: Document) {
 
 /** Resolves image URLs against the page address; only http(s) images are kept. */
 const absoluteImage = (src: string | null | undefined, baseUrl?: string) => { if (!src || src.startsWith('data:')) return ''; try { const url = new URL(src.trim(), baseUrl); return /^https?:$/.test(url.protocol) ? url.href : ''; } catch { return ''; } };
+const NON_PRODUCT_IMAGE = /logo|favicon|sprite|avatar|placeholder|pixel\.(gif|png)/i;
+
+/** Every distinct, plausibly-a-photo image on the page (dedup'd, logos/icons filtered), for the OCR fallback. */
+function collectPageImages(doc: Document, baseUrl: string | undefined, limit: number): string[] {
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  doc.querySelectorAll('img').forEach((img) => {
+    if (urls.length >= limit) return;
+    const src = img.getAttribute('data-src') || img.getAttribute('data-lazy') || img.getAttribute('src') || img.getAttribute('srcset')?.split(/[\s,]+/)[0];
+    const url = absoluteImage(src, baseUrl);
+    if (!url || seen.has(url) || NON_PRODUCT_IMAGE.test(url)) return;
+    seen.add(url);
+    urls.push(url);
+  });
+  return urls;
+}
 
 export function extractHtml(input: string, sourceId: string, baseUrl?: string): ExtractionResult {
   const doc = new DOMParser().parseFromString(input.slice(0, SOURCE_LIMITS.maxText * 5), 'text/html');
@@ -161,5 +177,6 @@ export function extractHtml(input: string, sourceId: string, baseUrl?: string): 
     if (candidates.length) extra.push('No había datos estructurados: se leyó el texto visible de la página, revisá cada candidato.');
   }
   if (!candidates.length && looksLikeApp) extra.push('La página carga los productos con JavaScript y no se pueden leer desde el servidor; probá con la lista de precios en PDF, un CSV/JSON exportado o cargalos manualmente.');
-  return finish(candidates, 'No se encontraron productos en la página. Probá con la URL de una categoría o de la lista de precios, o cargalos manualmente.', extra);
+  const result = finish(candidates, 'No se encontraron productos en la página. Probá con la URL de una categoría o de la lista de precios, o cargalos manualmente.', extra);
+  return { ...result, pageImages: collectPageImages(doc, baseUrl, SOURCE_LIMITS.maxImages) };
 }

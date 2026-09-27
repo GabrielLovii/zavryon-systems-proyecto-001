@@ -87,6 +87,8 @@ export function headerRoles(cells: string[]): (ColumnRole | null)[] | null {
 /** Lines that mention prices but are not products (totals, conditions, contact data, pagination). */
 const NOISE_START = /^(total|subtotal|iva|p[aá]gina|page|tel[eé]fono|tel\.|cel\.|whatsapp|cuit|fecha|vigencia|emitido|lista de precios)\b/i;
 const NOISE_ANYWHERE = /\b(pedido m[ií]nimo|compra m[ií]nima|m[ií]nimo de compra|sin iva|con iva|iva incluido|precios? sujetos?|env[ií]o gratis|costo de env[ií]o|descuento del|v[aá]lido hasta|v[aá]lidos? hasta|total general|forma de pago)\b/i;
+// "25.09 al 27.09" (promo/validity date ranges) looks exactly like a trailing decimal price ($ 27,09); reject before pricing it.
+const DATE_RANGE = /\b\d{1,2}[./]\d{1,2}(?:[./]\d{2,4})?\s*(?:al|a|hasta)\s*\d{1,2}[./]\d{1,2}(?:[./]\d{2,4})?\b/i;
 
 const cleanName = (value: string) => value.replace(/\.{3,}|_{3,}|-{3,}/g, ' ').replace(/\s{2,}/g, ' ').replace(/^[\s\-–•·*|]+|[\s\-–•·*|:]+$/g, '').trim();
 
@@ -115,7 +117,7 @@ export function parseCells(cells: string[], roles?: (ColumnRole | null)[] | null
 /** Parses one line of catalog text ("LAC-001 Leche entera 1L ....... $ 2.400,00"); null when it doesn't look like a product. */
 export function parseLine(line: string): ParsedProduct | null {
   const text = line.replace(/\s+/g, ' ').trim();
-  if (text.length < 3 || text.length > 300 || !/[a-záéíóúñ]{3,}/i.test(text)) return null;
+  if (text.length < 3 || text.length > 300 || !/[a-záéíóúñ]{3,}/i.test(text) || DATE_RANGE.test(text)) return null;
   const price = findPrice(text);
   const found = findSku(text);
   // Document numbers (orders, invoices, delivery notes) are not product codes.

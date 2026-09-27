@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
-import { extractHtml, extractJson, extractText } from '../lib/source-extraction.ts';
+import { extractHtml, extractJson, extractText, textCandidates } from '../lib/source-extraction.ts';
 import { extractPdf, layoutLines } from '../lib/pdf-extractor.ts';
 import { csvToText } from '../lib/catalog-parse.ts';
 
@@ -89,4 +89,25 @@ test('a real price-list PDF produces one candidate per product row', async () =>
 test('tables whose header is not about products (orders, schedules) are ignored', () => {
   const html = '<table><thead><tr><th>Pedido</th><th>Proveedor</th><th>Total</th><th>Estado</th></tr></thead><tbody><tr><td>PED-1048</td><td>Distribuciones Norte</td><td>$ 515.200</td><td>Enviado</td></tr></tbody></table>';
   assert.equal(extractHtml(html, 'src-orders').candidates.length, 0);
+});
+
+test('a promo/validity date range at line end is not mistaken for a price', () => {
+  assert.equal(textCandidates('Ofertas fin de semana | 25.09 al 27.09', 'src-date', 'Texto').length, 0);
+  assert.equal(textCandidates('Especial cumpleaños Vital | 21.09 al 27.09', 'src-date', 'Texto').length, 0);
+});
+
+test('extractHtml collects page images (skipping logos/icons) for the OCR fallback', () => {
+  const html = '<body><img src="/logo.png"><img src="/img/promo-banner.jpg"><img data-src="/img/promo-banner.jpg"><img src="/favicon.ico"><img src="https://cdn.ejemplo.com/oferta.jpg"></body>';
+  const result = extractHtml(html, 'src-images', 'https://tienda.ejemplo.com.ar/');
+  assert.deepEqual(result.pageImages, ['https://tienda.ejemplo.com.ar/img/promo-banner.jpg', 'https://cdn.ejemplo.com/oferta.jpg']);
+});
+
+test('OCR text recognized from a page image feeds the same product parser (name + price)', () => {
+  // Text as tesseract.js would return it from a price banner image — no HTML/table structure at all.
+  const ocrText = 'Coca-Cola 2,25 L $ 3.250,00\n';
+  const candidates = textCandidates(ocrText, 'src-ocr', 'Imagen (OCR)');
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].name, 'Coca-Cola 2,25 L');
+  assert.equal(candidates[0].price, 3250);
+  assert.equal(candidates[0].fields.name.evidence[0].label, 'Imagen (OCR)');
 });

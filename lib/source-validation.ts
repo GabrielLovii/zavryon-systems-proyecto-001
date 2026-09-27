@@ -1,6 +1,6 @@
 import type { Evidence, FieldResult, SourceCandidate, SourceCandidateFields } from './mock-data';
 
-export const SOURCE_LIMITS = { maxBytes: 5 * 1024 * 1024, maxPages: 30, maxText: 200_000, maxCandidates: 100, timeoutMs: 10_000 } as const;
+export const SOURCE_LIMITS = { maxBytes: 5 * 1024 * 1024, maxPages: 30, maxText: 200_000, maxCandidates: 100, timeoutMs: 10_000, maxImages: 12, maxImageBytes: 8 * 1024 * 1024 } as const;
 
 const ipv4 = (value: string) => {
   const parts = value.split('.');
